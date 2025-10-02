@@ -5,7 +5,7 @@ Pkg.activate(@__DIR__)
 Pkg.instantiate()
 
 using Scratch, Preferences, CMake_jll, Ninja_jll, LibGit2, LLVM_full_jll
-using CUDA_SDK_jll, CUDA, OpenBLAS_jll
+using CUDA_SDK_jll, CUDA, OpenBLAS_jll, CompilerSupportLibraries_jll
 
 XKBlas_pkg = Base.UUID("8d3f9e88-0651-4e8b-8f79-7d9d5f5f9e88")
 
@@ -159,9 +159,18 @@ end
 @info "Building XKAAPI (xkrt) dependency..."
 @info "="^60
 
+# Get CompilerSupportLibraries path for libstdc++
+csl_libdir = joinpath(CompilerSupportLibraries_jll.artifact_dir, "lib")
+@info "Using CompilerSupportLibraries_jll for C++ stdlib: $csl_libdir"
+
+# Set linker flags to find libstdc++
+link_flags = "-L$csl_libdir -Wl,-rpath,$csl_libdir"
+
 xkaapi_cmake_options = String[
     "-DCMAKE_C_COMPILER=$clang_path",
     "-DCMAKE_CXX_COMPILER=$clangxx_path",
+    "-DCMAKE_EXE_LINKER_FLAGS=$link_flags",
+    "-DCMAKE_SHARED_LINKER_FLAGS=$link_flags",
     "-DCMAKE_BUILD_TYPE=Release",
     "-DCMAKE_INSTALL_PREFIX=$xkaapi_install_dir",
     "-DUSE_CUDA=$(use_cuda ? "on" : "off")",
@@ -226,6 +235,8 @@ xkblas_cmake_options = String[
     "-DCMAKE_CXX_COMPILER=$clangxx_path",
     "-DCMAKE_C_FLAGS=-Wno-error",
     "-DCMAKE_CXX_FLAGS=-Wno-error",
+    "-DCMAKE_EXE_LINKER_FLAGS=$link_flags",
+    "-DCMAKE_SHARED_LINKER_FLAGS=$link_flags",
     "-DCMAKE_BUILD_TYPE=Release",
     "-DCMAKE_INSTALL_PREFIX=$xkblas_install_dir",
     "-DCMAKE_PREFIX_PATH=$cmake_prefix_path",

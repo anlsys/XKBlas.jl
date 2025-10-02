@@ -1,5 +1,6 @@
 [deps]
 CMake_jll = "3f4e10e2-61f2-5801-8945-23b9d642d0e6"
+CompilerSupportLibraries_jll = "e66e0078-7015-5450-92f7-15fbd957f2ae"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 CUDA_Compiler_jll = "d1e2174e-dfdc-576e-b43e-73b79eb1aca8"
 CUDA_Runtime_jll = "76a88914-d11a-5bdc-97e0-2f5a05c973a2"
