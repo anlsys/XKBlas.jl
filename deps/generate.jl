@@ -1,39 +1,37 @@
 using Clang.Generators
 using Clang.LibClang.Clang_jll
-using ArgParse
+using Scratch
 
-function main()
-    s = ArgParseSettings()
-    @add_arg_table s begin
-        "--input", "-i"
-            help = "Input directory containing xkblas headers"
-            arg_type = String
-            required = true
-    end
+XKBlas_pkg = Base.UUID("8d3f9e88-0651-4e8b-8f79-7d9d5f5f9e88")
 
-    parsed_args = parse_args(ARGS, s)
-    xkblas_dir = parsed_args["input"]
+xkblas_dir = get_scratch!(XKBlas_pkg, "xkblas")
+xkblas_include_dir = joinpath(xkblas_dir, "include")
 
-    cd(@__DIR__)
+println("Using XKBlas headers in $xkblas_include_dir")
 
-    # Load generator options (must include type_map and rename_functions)
-    options = load_options(joinpath(@__DIR__, "generator.toml"))
+# Load generator options (must include type_map and rename_functions)
+options = load_options(joinpath(@__DIR__, "generator.toml"))
 
-    # Collect all headers
-    headers = [joinpath(xkblas_dir, f) for f in readdir(xkblas_dir) if endswith(f, ".h")]
+# Collect all headers (excluding template xkernels.h)
+headers = [joinpath(xkblas_include_dir, "xkblas",f) for f in readdir(xkblas_include_dir * "/xkblas") if endswith(f, ".h") && f != "xkernels.h"]
+@show headers
+# Default compiler flags
+args = get_default_args()
+push!(args, "-I$xkblas_include_dir")
 
-    # Default compiler flags
-    args = get_default_args()
-    push!(args, "-I$xkblas_dir")
+# Create context: only two positional arguments are supported in this version
+ctx = create_context(headers, args, options)
 
-    # Create context: only two positional arguments are supported in this version
-    ctx = create_context(headers, args, options)
+# Generate bindings
+build!(ctx)
 
-    # Generate bindings
-    build!(ctx)
+println("bindings.jl generated successfully in src/")
 
-    println("bindings.jl generated successfully in src/")
-end
+# Remove xkblas_ prefix from function names (but keep @ccall names unchanged)
+bindings_file = joinpath(@__DIR__, "..", "src", "bindings.jl")
+content = read(bindings_file, String)
+content = replace(content, r"^function xkblas_(\w+)\("m => s"function \1(")
+write(bindings_file, content)
 
-main()
+println("Removed xkblas_ prefix from function names")
 
