@@ -16,7 +16,7 @@ options = load_options(joinpath(@__DIR__, "generator.toml"))
 headers = [
     joinpath(xkblas_include_dir, "xkblas/xkblas.h"),
     joinpath(xkblas_include_dir, "xkblas/kernels.h"),
-    joinpath(xkblas_include_dir, "xkblas/flops.h"),
+    # joinpath(xkblas_include_dir, "xkblas/flops.h"), # TODO: almost work in "aggressive" mode, only "_Complex float" are missing
 ]
 @show headers
 
