@@ -12,15 +12,26 @@ println("Using XKBlas headers in $xkblas_include_dir")
 # Load generator options (must include type_map and rename_functions)
 options = load_options(joinpath(@__DIR__, "generator.toml"))
 
-# Collect all headers (excluding template xkernels.h)
-headers = [joinpath(xkblas_include_dir, "xkblas",f) for f in readdir(xkblas_include_dir * "/xkblas") if endswith(f, ".h") && f != "xkernels.h"]
+# Collect all headers
+headers = [
+    joinpath(xkblas_include_dir, "xkblas/xkblas.h"),
+    joinpath(xkblas_include_dir, "xkblas/kernels.h"),
+    joinpath(xkblas_include_dir, "xkblas/flops.h"),
+]
 @show headers
+
 # Default compiler flags
 args = get_default_args()
 push!(args, "-I$xkblas_include_dir")
 
 # Create context: only two positional arguments are supported in this version
 ctx = create_context(headers, args, options)
+
+# -------------------------------------------------------------------------
+# Skip macros that Clang.jl cannot generate
+# -------------------------------------------------------------------------
+# ctx.options[:macro_filter] = name -> !(startswith(name, "FMULS_") || startswith(name, "FADDS_"))
+# -------------------------------------------------------------------------
 
 # Generate bindings
 build!(ctx)

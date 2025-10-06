@@ -1,14 +1,9 @@
 # Building XKBlas Locally
 
+This directory contains scripts to build XKBlas and its dependency XKAAPI (xkrt) from source.
+
 ## TLDR;
 - Run `julia --project=. -e 'using Pkg; Pkg.instantiate(); include("build_local.jl")'`
-
-## TODO
-- Make a proper julia package. This thing only needs a `libxkblas.so` installed
-- Add support for host-lambdas. Maybe binding to xkrt first
-- Add more examples
-
-This directory contains scripts to build XKBlas and its dependency XKAAPI (xkrt) from source.
 
 ## Overview
 

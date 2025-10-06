@@ -5,12 +5,14 @@ Pkg.activate(@__DIR__)
 Pkg.instantiate()
 
 using Scratch, Preferences, CMake_jll, Ninja_jll, LibGit2, LLVM_full_jll
-using CUDA_SDK_jll, CUDA, OpenBLAS_jll
+using CUDA
+# using CUDA_SDK_jll    # TODO: enable me when CUDA_SDK_jll is fixed
+using OpenBLAS_jll
 
 XKBlas_pkg = Base.UUID("8d3f9e88-0651-4e8b-8f79-7d9d5f5f9e88")
 
 # Configuration from install.sh
-const XKAAPI_BRANCH = "master"
+const XKAAPI_BRANCH = "julia-nvcc-fix"
 const XKBLAS_BRANCH = "v2.0"
 const XKAAPI_URL = "https://gitlab.inria.fr/xkaapi/dev-v2.git"
 const XKBLAS_URL = "https://gitlab.inria.fr/xkblas/dev.git"
@@ -137,17 +139,22 @@ clangxx_path = clang_path * "++"
 @info "  CXX: $clangxx_path"
 
 # Check if CUDA is functional
+CUDA.set_runtime_version!(local_toolkit=true)
 use_cuda = CUDA.functional()
 @info "CUDA.functional() = $use_cuda"
 
 # Use CUDA_SDK_jll for CUDA path if available
 cmake_prefix_path = ""
 if use_cuda
-    cuda_path = joinpath(CUDA_SDK_jll.artifact_dir, "cuda")
-    @info "Using CUDA_SDK_jll:"
-    @info "  CUDA path: $cuda_path"
-    @info "  nvcc: $(joinpath(cuda_path, "bin", "nvcc"))"
-    cmake_prefix_path = cuda_path
+    # append CUDA_PATH to prefix path
+    cmake_prefix_path=ENV["CUDA_PATH"]
+
+    # bellow is buggy version using CUDA_SDK_jll
+    #    cuda_path = joinpath(CUDA_SDK_jll.artifact_dir, "cuda")
+    #    @info "Using CUDA_SDK_jll:"
+    #    @info "  CUDA path: $cuda_path"
+    #    @info "  nvcc: $(joinpath(cuda_path, "bin", "nvcc"))"
+    #    cmake_prefix_path = cuda_path
 else
     @warn "CUDA is not functional. Building without CUDA support."
 end

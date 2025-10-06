@@ -188,7 +188,8 @@ add_record_constructors = []
 # it's highly recommended to set this entry to "basic".
 # if you'd like to skip all of the macros, please set this entry to "disable".
 # if you'd like to translate function-like macros to Julia, please set this entry to "aggressive".
-macro_mode = "basic"
+#macro_mode = "basic"
+macro_mode = "aggressive"
 
 # function-like macros in the following list will always be translated.
 functionlike_macro_includelist = [
