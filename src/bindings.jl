@@ -1,5 +1,11 @@
 using CEnum: CEnum, @cenum
 
+const xkrt_device_global_id_bitfield_t = UInt16
+
+const xkrt_task_access_counter_type_t = UInt16
+
+const xkrt_device_global_id_t = UInt8
+
 function init()
     @ccall libxkblas.xkblas_init()::Cint
 end
@@ -128,19 +134,54 @@ const Complex64_t = ComplexF32
 
 const CFloat64_t = Cdouble
 
+const xkrt_device_driver_id_t = UInt8
+
+const xkrt_task_wait_counter_type_t = UInt16
+
+@cenum xkrt_driver_type_t::UInt32 begin
+    XKRT_DRIVER_TYPE_HOST = 0
+    XKRT_DRIVER_TYPE_CUDA = 1
+    XKRT_DRIVER_TYPE_ZE = 2
+    XKRT_DRIVER_TYPE_CL = 3
+    XKRT_DRIVER_TYPE_HIP = 4
+    XKRT_DRIVER_TYPE_SYCL = 5
+    XKRT_DRIVER_TYPE_MAX = 6
+end
+
+const xkrt_driver_type_bitfield_t = UInt8
+
+const xkrt_instruction_callback_index_t = UInt8
+
+function saxpby(n, alpha, x, incx, beta, y, incy)
+    @ccall libxkblas.xkblas_saxpby(n::Cint, alpha::Ptr{Cfloat}, x::Ptr{Cfloat}, incx::Cint, beta::Ptr{Cfloat}, y::Ptr{Cfloat}, incy::Cint)::Cint
+end
+
 function saxpby_async(n, alpha, x, incx, beta, y, incy)
     @ccall libxkblas.xkblas_saxpby_async(n::Cint, alpha::Ptr{Cfloat}, x::Ptr{Cfloat}, incx::Cint, beta::Ptr{Cfloat}, y::Ptr{Cfloat}, incy::Cint)::Cint
+end
+
+function saxpy(n, alpha, x, incx, y, incy)
+    @ccall libxkblas.xkblas_saxpy(n::Cint, alpha::Ptr{Cfloat}, x::Ptr{Cfloat}, incx::Cint, y::Ptr{Cfloat}, incy::Cint)::Cint
 end
 
 function saxpy_async(n, alpha, x, incx, y, incy)
     @ccall libxkblas.xkblas_saxpy_async(n::Cint, alpha::Ptr{Cfloat}, x::Ptr{Cfloat}, incx::Cint, y::Ptr{Cfloat}, incy::Cint)::Cint
 end
 
+function sdot(n, x, incx, y, incy, result)
+    @ccall libxkblas.xkblas_sdot(n::Cint, x::Ptr{Cfloat}, incx::Cint, y::Ptr{Cfloat}, incy::Cint, result::Ptr{Cfloat})::Cint
+end
+
 function sdot_async(n, x, incx, y, incy, result)
     @ccall libxkblas.xkblas_sdot_async(n::Cint, x::Ptr{Cfloat}, incx::Cint, y::Ptr{Cfloat}, incy::Cint, result::Ptr{Cfloat})::Cint
 end
 
-# no prototype is found for this function at skernels.h:52:9, please use with caution
+# no prototype is found for this function at for-all-kernels.h:57:1, please use with caution
+function sdivcopy()
+    @ccall libxkblas.xkblas_sdivcopy()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:57:1, please use with caution
 function sdivcopy_async()
     @ccall libxkblas.xkblas_sdivcopy_async()::Cint
 end
@@ -149,80 +190,284 @@ function sfill(n, x, v)
     @ccall libxkblas.xkblas_sfill(n::Cint, x::Ptr{Cfloat}, v::Cfloat)::Cint
 end
 
+function sfill_async(n, x, v)
+    @ccall libxkblas.xkblas_sfill_async(n::Cint, x::Ptr{Cfloat}, v::Cfloat)::Cint
+end
+
+function snrm2(n, x, result)
+    @ccall libxkblas.xkblas_snrm2(n::Cint, x::Ptr{Cfloat}, result::Ptr{Cfloat})::Cint
+end
+
 function snrm2_async(n, x, result)
     @ccall libxkblas.xkblas_snrm2_async(n::Cint, x::Ptr{Cfloat}, result::Ptr{Cfloat})::Cint
 end
 
-# no prototype is found for this function at skernels.h:58:9, please use with caution
+# no prototype is found for this function at for-all-kernels.h:63:1, please use with caution
+function sscalcopy()
+    @ccall libxkblas.xkblas_sscalcopy()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:63:1, please use with caution
 function sscalcopy_async()
     @ccall libxkblas.xkblas_sscalcopy_async()::Cint
+end
+
+function sscal(n, alpha, x, incx)
+    @ccall libxkblas.xkblas_sscal(n::Cint, alpha::Ptr{Cfloat}, x::Ptr{Cfloat}, incx::Cint)::Cint
 end
 
 function sscal_async(n, alpha, x, incx)
     @ccall libxkblas.xkblas_sscal_async(n::Cint, alpha::Ptr{Cfloat}, x::Ptr{Cfloat}, incx::Cint)::Cint
 end
 
+function scopyscale(m, n, should_copy, IW, D, ldd, L, ldl, U, ldu)
+    @ccall libxkblas.xkblas_scopyscale(m::Cint, n::Cint, should_copy::Cint, IW::Ptr{Cint}, D::Ptr{Cfloat}, ldd::Cint, L::Ptr{Cfloat}, ldl::Cint, U::Ptr{Cfloat}, ldu::Cint)::Cint
+end
+
 function scopyscale_async(m, n, should_copy, IW, D, ldd, L, ldl, U, ldu)
     @ccall libxkblas.xkblas_scopyscale_async(m::Cint, n::Cint, should_copy::Cint, IW::Ptr{Cint}, D::Ptr{Cfloat}, ldd::Cint, L::Ptr{Cfloat}, ldl::Cint, U::Ptr{Cfloat}, ldu::Cint)::Cint
+end
+
+function sgemv(transA, m, n, alpha, A, lda, x, incx, beta, y, incy)
+    @ccall libxkblas.xkblas_sgemv(transA::Cint, m::Cint, n::Cint, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, x::Ptr{Cfloat}, incx::Cint, beta::Ptr{Cfloat}, y::Ptr{Cfloat}, incy::Cint)::Cint
 end
 
 function sgemv_async(transA, m, n, alpha, A, lda, x, incx, beta, y, incy)
     @ccall libxkblas.xkblas_sgemv_async(transA::Cint, m::Cint, n::Cint, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, x::Ptr{Cfloat}, incx::Cint, beta::Ptr{Cfloat}, y::Ptr{Cfloat}, incy::Cint)::Cint
 end
 
+function sgemm(transA, transB, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
+    @ccall libxkblas.xkblas_sgemm(transA::Cint, transB::Cint, m::Cint, n::Cint, k::Cint, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, B::Ptr{Cfloat}, ldb::Cint, beta::Ptr{Cfloat}, C::Ptr{Cfloat}, ldc::Cint)::Cint
+end
+
 function sgemm_async(transA, transB, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
     @ccall libxkblas.xkblas_sgemm_async(transA::Cint, transB::Cint, m::Cint, n::Cint, k::Cint, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, B::Ptr{Cfloat}, ldb::Cint, beta::Ptr{Cfloat}, C::Ptr{Cfloat}, ldc::Cint)::Cint
+end
+
+function sgemmt(uplo, transA, transB, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
+    @ccall libxkblas.xkblas_sgemmt(uplo::Cint, transA::Cint, transB::Cint, n::Cint, k::Cint, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, B::Ptr{Cfloat}, ldb::Cint, beta::Ptr{Cfloat}, C::Ptr{Cfloat}, ldc::Cint)::Cint
 end
 
 function sgemmt_async(uplo, transA, transB, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
     @ccall libxkblas.xkblas_sgemmt_async(uplo::Cint, transA::Cint, transB::Cint, n::Cint, k::Cint, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, B::Ptr{Cfloat}, ldb::Cint, beta::Ptr{Cfloat}, C::Ptr{Cfloat}, ldc::Cint)::Cint
 end
 
-function sherk_async(uplo, transA, n, k, alpha, A, lda, beta, C, ldc)
-    @ccall libxkblas.xkblas_sherk_async(uplo::Cint, transA::Cint, n::Cint, k::Cint, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, beta::Ptr{Cfloat}, C::Ptr{Cfloat}, ldc::Cint)::Cint
+function sherk(uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
+    @ccall libxkblas.xkblas_sherk(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, beta::Ptr{Cfloat}, C::Ptr{Cfloat}, ldc::Cint)::Cint
 end
 
-function ssyrk_async(uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
-    @ccall libxkblas.xkblas_ssyrk_async(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, beta::Ptr{Cfloat}, C::Ptr{Cfloat}, ldc::Cint)::Cint
+function sherk_async(uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
+    @ccall libxkblas.xkblas_sherk_async(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, beta::Ptr{Cfloat}, C::Ptr{Cfloat}, ldc::Cint)::Cint
 end
 
-function strsm_async(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb)
-    @ccall libxkblas.xkblas_strsm_async(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, B::Ptr{Cfloat}, ldb::Cint)::Cint
-end
-
-function strmm_async(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb)
-    @ccall libxkblas.xkblas_strmm_async(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, B::Ptr{Cfloat}, ldb::Cint)::Cint
-end
-
-function ssyr2k_async(uplo, trans, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
-    @ccall libxkblas.xkblas_ssyr2k_async(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, B::Ptr{Cfloat}, ldb::Cint, beta::Ptr{Cfloat}, C::Ptr{Cfloat}, ldc::Cint)::Cint
+function ssymm(side, uplo, m, n, alpha, A, lda, B, ldb, beta, C, ldc)
+    @ccall libxkblas.xkblas_ssymm(side::Cint, uplo::Cint, m::Cint, n::Cint, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, B::Ptr{Cfloat}, ldb::Cint, beta::Ptr{Cfloat}, C::Ptr{Cfloat}, ldc::Cint)::Cint
 end
 
 function ssymm_async(side, uplo, m, n, alpha, A, lda, B, ldb, beta, C, ldc)
     @ccall libxkblas.xkblas_ssymm_async(side::Cint, uplo::Cint, m::Cint, n::Cint, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, B::Ptr{Cfloat}, ldb::Cint, beta::Ptr{Cfloat}, C::Ptr{Cfloat}, ldc::Cint)::Cint
 end
 
+function ssyr2k(uplo, trans, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
+    @ccall libxkblas.xkblas_ssyr2k(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, B::Ptr{Cfloat}, ldb::Cint, beta::Ptr{Cfloat}, C::Ptr{Cfloat}, ldc::Cint)::Cint
+end
+
+function ssyr2k_async(uplo, trans, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
+    @ccall libxkblas.xkblas_ssyr2k_async(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, B::Ptr{Cfloat}, ldb::Cint, beta::Ptr{Cfloat}, C::Ptr{Cfloat}, ldc::Cint)::Cint
+end
+
+function ssyrk(uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
+    @ccall libxkblas.xkblas_ssyrk(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, beta::Ptr{Cfloat}, C::Ptr{Cfloat}, ldc::Cint)::Cint
+end
+
+function ssyrk_async(uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
+    @ccall libxkblas.xkblas_ssyrk_async(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, beta::Ptr{Cfloat}, C::Ptr{Cfloat}, ldc::Cint)::Cint
+end
+
+function strmm(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb)
+    @ccall libxkblas.xkblas_strmm(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, B::Ptr{Cfloat}, ldb::Cint)::Cint
+end
+
+function strmm_async(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb)
+    @ccall libxkblas.xkblas_strmm_async(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, B::Ptr{Cfloat}, ldb::Cint)::Cint
+end
+
+function strsm(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb)
+    @ccall libxkblas.xkblas_strsm(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, B::Ptr{Cfloat}, ldb::Cint)::Cint
+end
+
+function strsm_async(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb)
+    @ccall libxkblas.xkblas_strsm_async(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, B::Ptr{Cfloat}, ldb::Cint)::Cint
+end
+
+function strsm_rec(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb, m_threshold)
+    @ccall libxkblas.xkblas_strsm_rec(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, B::Ptr{Cfloat}, ldb::Cint, m_threshold::Cint)::Cint
+end
+
+function strsm_rec_async(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb, m_threshold)
+    @ccall libxkblas.xkblas_strsm_rec_async(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, B::Ptr{Cfloat}, ldb::Cint, m_threshold::Cint)::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:220:1, please use with caution
+function sgeqrf()
+    @ccall libxkblas.xkblas_sgeqrf()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:220:1, please use with caution
+function sgeqrf_async()
+    @ccall libxkblas.xkblas_sgeqrf_async()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:221:1, please use with caution
+function sorgqr()
+    @ccall libxkblas.xkblas_sorgqr()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:221:1, please use with caution
+function sorgqr_async()
+    @ccall libxkblas.xkblas_sorgqr_async()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:222:1, please use with caution
+function sormqr()
+    @ccall libxkblas.xkblas_sormqr()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:222:1, please use with caution
+function sormqr_async()
+    @ccall libxkblas.xkblas_sormqr_async()::Cint
+end
+
+function spotrf(uplo, n, A, lda)
+    @ccall libxkblas.xkblas_spotrf(uplo::Cint, n::Cint, A::Ptr{Cfloat}, lda::Cint)::Cint
+end
+
 function spotrf_async(uplo, n, A, lda)
     @ccall libxkblas.xkblas_spotrf_async(uplo::Cint, n::Cint, A::Ptr{Cfloat}, lda::Cint)::Cint
+end
+
+function saxpy_tile(n, alpha, x, incx, y, incy, bs, device_global_id)
+    @ccall libxkblas.xkblas_saxpy_tile(n::Cint, alpha::Ptr{Cfloat}, x::Ptr{Cfloat}, incx::Cint, y::Ptr{Cfloat}, incy::Cint, bs::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function saxpy_tile_async(n, alpha, x, incx, y, incy, bs, device_global_id)
+    @ccall libxkblas.xkblas_saxpy_tile_async(n::Cint, alpha::Ptr{Cfloat}, x::Ptr{Cfloat}, incx::Cint, y::Ptr{Cfloat}, incy::Cint, bs::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function sdot_tile(n, x, incx, y, incy, temp_r, r, device_global_id)
+    @ccall libxkblas.xkblas_sdot_tile(n::Cint, x::Ptr{Cfloat}, incx::Cint, y::Ptr{Cfloat}, incy::Cint, temp_r::Ptr{Cfloat}, r::Ptr{Cfloat}, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function sdot_tile_async(n, x, incx, y, incy, temp_r, r, device_global_id)
+    @ccall libxkblas.xkblas_sdot_tile_async(n::Cint, x::Ptr{Cfloat}, incx::Cint, y::Ptr{Cfloat}, incy::Cint, temp_r::Ptr{Cfloat}, r::Ptr{Cfloat}, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function sscal_tile(n, alpha, x, incx, device_global_id)
+    @ccall libxkblas.xkblas_sscal_tile(n::Cint, alpha::Ptr{Cfloat}, x::Ptr{Cfloat}, incx::Cint, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function sscal_tile_async(n, alpha, x, incx, device_global_id)
+    @ccall libxkblas.xkblas_sscal_tile_async(n::Cint, alpha::Ptr{Cfloat}, x::Ptr{Cfloat}, incx::Cint, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function scopyscale_tile(m, n, should_copy, IW, D, Dm, Dn, ldd, L, Lm, Ln, ldl, U, Um, Un, ldu, device_global_id)
+    @ccall libxkblas.xkblas_scopyscale_tile(m::Csize_t, n::Csize_t, should_copy::Cint, IW::Ptr{Cint}, D::Ptr{Cfloat}, Dm::Csize_t, Dn::Csize_t, ldd::Cint, L::Ptr{Cfloat}, Lm::Csize_t, Ln::Csize_t, ldl::Cint, U::Ptr{Cfloat}, Um::Csize_t, Un::Csize_t, ldu::Cint, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function scopyscale_tile_async(m, n, should_copy, IW, D, Dm, Dn, ldd, L, Lm, Ln, ldl, U, Um, Un, ldu, device_global_id)
+    @ccall libxkblas.xkblas_scopyscale_tile_async(m::Csize_t, n::Csize_t, should_copy::Cint, IW::Ptr{Cint}, D::Ptr{Cfloat}, Dm::Csize_t, Dn::Csize_t, ldd::Cint, L::Ptr{Cfloat}, Lm::Csize_t, Ln::Csize_t, ldl::Cint, U::Ptr{Cfloat}, Um::Csize_t, Un::Csize_t, ldu::Cint, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function sgemv_tile(transA, m, n, alpha, A, lda, x, incx, beta, y, tm, mb, incy, device_global_id)
+    @ccall libxkblas.xkblas_sgemv_tile(transA::Cint, m::Csize_t, n::Csize_t, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, x::Ptr{Cfloat}, incx::Cint, beta::Ptr{Cfloat}, y::Ptr{Cfloat}, tm::Csize_t, mb::Csize_t, incy::Cint, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function sgemv_tile_async(transA, m, n, alpha, A, lda, x, incx, beta, y, tm, mb, incy, device_global_id)
+    @ccall libxkblas.xkblas_sgemv_tile_async(transA::Cint, m::Csize_t, n::Csize_t, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, lda::Cint, x::Ptr{Cfloat}, incx::Cint, beta::Ptr{Cfloat}, y::Ptr{Cfloat}, tm::Csize_t, mb::Csize_t, incy::Cint, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function sgemm_tile(transA, transB, m, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, B, Btm, Btn, Bmb, Bnb, ldb, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_sgemm_tile(transA::Cint, transB::Cint, m::Csize_t, n::Csize_t, k::Csize_t, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, B::Ptr{Cfloat}, Btm::Csize_t, Btn::Csize_t, Bmb::Csize_t, Bnb::Csize_t, ldb::Csize_t, beta::Ptr{Cfloat}, C::Ptr{Cfloat}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function sgemm_tile_async(transA, transB, m, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, B, Btm, Btn, Bmb, Bnb, ldb, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_sgemm_tile_async(transA::Cint, transB::Cint, m::Csize_t, n::Csize_t, k::Csize_t, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, B::Ptr{Cfloat}, Btm::Csize_t, Btn::Csize_t, Bmb::Csize_t, Bnb::Csize_t, ldb::Csize_t, beta::Ptr{Cfloat}, C::Ptr{Cfloat}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function sgemmt_tile(uplo, transA, transB, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, B, Btm, Btn, Bmb, Bnb, ldb, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_sgemmt_tile(uplo::Cint, transA::Cint, transB::Cint, n::Csize_t, k::Csize_t, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, B::Ptr{Cfloat}, Btm::Csize_t, Btn::Csize_t, Bmb::Csize_t, Bnb::Csize_t, ldb::Csize_t, beta::Ptr{Cfloat}, C::Ptr{Cfloat}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function sgemmt_tile_async(uplo, transA, transB, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, B, Btm, Btn, Bmb, Bnb, ldb, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_sgemmt_tile_async(uplo::Cint, transA::Cint, transB::Cint, n::Csize_t, k::Csize_t, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, B::Ptr{Cfloat}, Btm::Csize_t, Btn::Csize_t, Bmb::Csize_t, Bnb::Csize_t, ldb::Csize_t, beta::Ptr{Cfloat}, C::Ptr{Cfloat}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function sherk_tile(uplo, trans, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_sherk_tile(uplo::Cint, trans::Cint, n::Csize_t, k::Csize_t, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, beta::Ptr{Cfloat}, C::Ptr{Cfloat}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function sherk_tile_async(uplo, trans, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_sherk_tile_async(uplo::Cint, trans::Cint, n::Csize_t, k::Csize_t, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, beta::Ptr{Cfloat}, C::Ptr{Cfloat}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function ssyrk_tile(uplo, trans, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_ssyrk_tile(uplo::Cint, trans::Cint, n::Csize_t, k::Csize_t, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, beta::Ptr{Cfloat}, C::Ptr{Cfloat}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function ssyrk_tile_async(uplo, trans, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_ssyrk_tile_async(uplo::Cint, trans::Cint, n::Csize_t, k::Csize_t, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, beta::Ptr{Cfloat}, C::Ptr{Cfloat}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function strsm_tile(side, uplo, transA, diag, m, n, alpha, A, Atm, Atn, Amb, Anb, lda, B, Btm, Btn, Bmb, Bnb, ldb, device_global_id)
+    @ccall libxkblas.xkblas_strsm_tile(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Csize_t, n::Csize_t, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, B::Ptr{Cfloat}, Btm::Csize_t, Btn::Csize_t, Bmb::Csize_t, Bnb::Csize_t, ldb::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function strsm_tile_async(side, uplo, transA, diag, m, n, alpha, A, Atm, Atn, Amb, Anb, lda, B, Btm, Btn, Bmb, Bnb, ldb, device_global_id)
+    @ccall libxkblas.xkblas_strsm_tile_async(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Csize_t, n::Csize_t, alpha::Ptr{Cfloat}, A::Ptr{Cfloat}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, B::Ptr{Cfloat}, Btm::Csize_t, Btn::Csize_t, Bmb::Csize_t, Bnb::Csize_t, ldb::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function spotrf_tile(uplo, n, A, Atm, Atn, Amb, Anb, lda, device_global_id)
+    @ccall libxkblas.xkblas_spotrf_tile(uplo::Cint, n::Cint, A::Ptr{Cfloat}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function spotrf_tile_async(uplo, n, A, Atm, Atn, Amb, Anb, lda, device_global_id)
+    @ccall libxkblas.xkblas_spotrf_tile_async(uplo::Cint, n::Cint, A::Ptr{Cfloat}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
 end
 
 function sspmv_async(alpha, transA, index_base, index_type, nrows, ncols, nnz, format, csr_row_offsets, csr_col_indices, csr_values, X, beta, Y)
     @ccall libxkblas.xkblas_sspmv_async(alpha::Ptr{Cfloat}, transA::Cint, index_base::Cint, index_type::Cint, nrows::Cint, ncols::Cint, nnz::Cint, format::Cint, csr_row_offsets::Ptr{Cvoid}, csr_col_indices::Ptr{Cvoid}, csr_values::Ptr{Cfloat}, X::Ptr{Cfloat}, beta::Ptr{Cfloat}, Y::Ptr{Cfloat})::Cint
 end
 
+function daxpby(n, alpha, x, incx, beta, y, incy)
+    @ccall libxkblas.xkblas_daxpby(n::Cint, alpha::Ptr{Cdouble}, x::Ptr{Cdouble}, incx::Cint, beta::Ptr{Cdouble}, y::Ptr{Cdouble}, incy::Cint)::Cint
+end
+
 function daxpby_async(n, alpha, x, incx, beta, y, incy)
     @ccall libxkblas.xkblas_daxpby_async(n::Cint, alpha::Ptr{Cdouble}, x::Ptr{Cdouble}, incx::Cint, beta::Ptr{Cdouble}, y::Ptr{Cdouble}, incy::Cint)::Cint
+end
+
+function daxpy(n, alpha, x, incx, y, incy)
+    @ccall libxkblas.xkblas_daxpy(n::Cint, alpha::Ptr{Cdouble}, x::Ptr{Cdouble}, incx::Cint, y::Ptr{Cdouble}, incy::Cint)::Cint
 end
 
 function daxpy_async(n, alpha, x, incx, y, incy)
     @ccall libxkblas.xkblas_daxpy_async(n::Cint, alpha::Ptr{Cdouble}, x::Ptr{Cdouble}, incx::Cint, y::Ptr{Cdouble}, incy::Cint)::Cint
 end
 
+function ddot(n, x, incx, y, incy, result)
+    @ccall libxkblas.xkblas_ddot(n::Cint, x::Ptr{Cdouble}, incx::Cint, y::Ptr{Cdouble}, incy::Cint, result::Ptr{Cdouble})::Cint
+end
+
 function ddot_async(n, x, incx, y, incy, result)
     @ccall libxkblas.xkblas_ddot_async(n::Cint, x::Ptr{Cdouble}, incx::Cint, y::Ptr{Cdouble}, incy::Cint, result::Ptr{Cdouble})::Cint
 end
 
-# no prototype is found for this function at dkernels.h:52:9, please use with caution
+# no prototype is found for this function at for-all-kernels.h:57:1, please use with caution
+function ddivcopy()
+    @ccall libxkblas.xkblas_ddivcopy()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:57:1, please use with caution
 function ddivcopy_async()
     @ccall libxkblas.xkblas_ddivcopy_async()::Cint
 end
@@ -231,80 +476,284 @@ function dfill(n, x, v)
     @ccall libxkblas.xkblas_dfill(n::Cint, x::Ptr{Cdouble}, v::Cdouble)::Cint
 end
 
+function dfill_async(n, x, v)
+    @ccall libxkblas.xkblas_dfill_async(n::Cint, x::Ptr{Cdouble}, v::Cdouble)::Cint
+end
+
+function dnrm2(n, x, result)
+    @ccall libxkblas.xkblas_dnrm2(n::Cint, x::Ptr{Cdouble}, result::Ptr{Cfloat})::Cint
+end
+
 function dnrm2_async(n, x, result)
     @ccall libxkblas.xkblas_dnrm2_async(n::Cint, x::Ptr{Cdouble}, result::Ptr{Cfloat})::Cint
 end
 
-# no prototype is found for this function at dkernels.h:58:9, please use with caution
+# no prototype is found for this function at for-all-kernels.h:63:1, please use with caution
+function dscalcopy()
+    @ccall libxkblas.xkblas_dscalcopy()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:63:1, please use with caution
 function dscalcopy_async()
     @ccall libxkblas.xkblas_dscalcopy_async()::Cint
+end
+
+function dscal(n, alpha, x, incx)
+    @ccall libxkblas.xkblas_dscal(n::Cint, alpha::Ptr{Cdouble}, x::Ptr{Cdouble}, incx::Cint)::Cint
 end
 
 function dscal_async(n, alpha, x, incx)
     @ccall libxkblas.xkblas_dscal_async(n::Cint, alpha::Ptr{Cdouble}, x::Ptr{Cdouble}, incx::Cint)::Cint
 end
 
+function dcopyscale(m, n, should_copy, IW, D, ldd, L, ldl, U, ldu)
+    @ccall libxkblas.xkblas_dcopyscale(m::Cint, n::Cint, should_copy::Cint, IW::Ptr{Cint}, D::Ptr{Cdouble}, ldd::Cint, L::Ptr{Cdouble}, ldl::Cint, U::Ptr{Cdouble}, ldu::Cint)::Cint
+end
+
 function dcopyscale_async(m, n, should_copy, IW, D, ldd, L, ldl, U, ldu)
     @ccall libxkblas.xkblas_dcopyscale_async(m::Cint, n::Cint, should_copy::Cint, IW::Ptr{Cint}, D::Ptr{Cdouble}, ldd::Cint, L::Ptr{Cdouble}, ldl::Cint, U::Ptr{Cdouble}, ldu::Cint)::Cint
+end
+
+function dgemv(transA, m, n, alpha, A, lda, x, incx, beta, y, incy)
+    @ccall libxkblas.xkblas_dgemv(transA::Cint, m::Cint, n::Cint, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, x::Ptr{Cdouble}, incx::Cint, beta::Ptr{Cdouble}, y::Ptr{Cdouble}, incy::Cint)::Cint
 end
 
 function dgemv_async(transA, m, n, alpha, A, lda, x, incx, beta, y, incy)
     @ccall libxkblas.xkblas_dgemv_async(transA::Cint, m::Cint, n::Cint, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, x::Ptr{Cdouble}, incx::Cint, beta::Ptr{Cdouble}, y::Ptr{Cdouble}, incy::Cint)::Cint
 end
 
+function dgemm(transA, transB, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
+    @ccall libxkblas.xkblas_dgemm(transA::Cint, transB::Cint, m::Cint, n::Cint, k::Cint, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, B::Ptr{Cdouble}, ldb::Cint, beta::Ptr{Cdouble}, C::Ptr{Cdouble}, ldc::Cint)::Cint
+end
+
 function dgemm_async(transA, transB, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
     @ccall libxkblas.xkblas_dgemm_async(transA::Cint, transB::Cint, m::Cint, n::Cint, k::Cint, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, B::Ptr{Cdouble}, ldb::Cint, beta::Ptr{Cdouble}, C::Ptr{Cdouble}, ldc::Cint)::Cint
+end
+
+function dgemmt(uplo, transA, transB, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
+    @ccall libxkblas.xkblas_dgemmt(uplo::Cint, transA::Cint, transB::Cint, n::Cint, k::Cint, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, B::Ptr{Cdouble}, ldb::Cint, beta::Ptr{Cdouble}, C::Ptr{Cdouble}, ldc::Cint)::Cint
 end
 
 function dgemmt_async(uplo, transA, transB, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
     @ccall libxkblas.xkblas_dgemmt_async(uplo::Cint, transA::Cint, transB::Cint, n::Cint, k::Cint, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, B::Ptr{Cdouble}, ldb::Cint, beta::Ptr{Cdouble}, C::Ptr{Cdouble}, ldc::Cint)::Cint
 end
 
-function dherk_async(uplo, transA, n, k, alpha, A, lda, beta, C, ldc)
-    @ccall libxkblas.xkblas_dherk_async(uplo::Cint, transA::Cint, n::Cint, k::Cint, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, beta::Ptr{Cdouble}, C::Ptr{Cdouble}, ldc::Cint)::Cint
+function dherk(uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
+    @ccall libxkblas.xkblas_dherk(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, beta::Ptr{Cdouble}, C::Ptr{Cdouble}, ldc::Cint)::Cint
 end
 
-function dsyrk_async(uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
-    @ccall libxkblas.xkblas_dsyrk_async(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, beta::Ptr{Cdouble}, C::Ptr{Cdouble}, ldc::Cint)::Cint
+function dherk_async(uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
+    @ccall libxkblas.xkblas_dherk_async(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, beta::Ptr{Cdouble}, C::Ptr{Cdouble}, ldc::Cint)::Cint
 end
 
-function dtrsm_async(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb)
-    @ccall libxkblas.xkblas_dtrsm_async(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, B::Ptr{Cdouble}, ldb::Cint)::Cint
-end
-
-function dtrmm_async(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb)
-    @ccall libxkblas.xkblas_dtrmm_async(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, B::Ptr{Cdouble}, ldb::Cint)::Cint
-end
-
-function dsyr2k_async(uplo, trans, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
-    @ccall libxkblas.xkblas_dsyr2k_async(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, B::Ptr{Cdouble}, ldb::Cint, beta::Ptr{Cdouble}, C::Ptr{Cdouble}, ldc::Cint)::Cint
+function dsymm(side, uplo, m, n, alpha, A, lda, B, ldb, beta, C, ldc)
+    @ccall libxkblas.xkblas_dsymm(side::Cint, uplo::Cint, m::Cint, n::Cint, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, B::Ptr{Cdouble}, ldb::Cint, beta::Ptr{Cdouble}, C::Ptr{Cdouble}, ldc::Cint)::Cint
 end
 
 function dsymm_async(side, uplo, m, n, alpha, A, lda, B, ldb, beta, C, ldc)
     @ccall libxkblas.xkblas_dsymm_async(side::Cint, uplo::Cint, m::Cint, n::Cint, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, B::Ptr{Cdouble}, ldb::Cint, beta::Ptr{Cdouble}, C::Ptr{Cdouble}, ldc::Cint)::Cint
 end
 
+function dsyr2k(uplo, trans, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
+    @ccall libxkblas.xkblas_dsyr2k(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, B::Ptr{Cdouble}, ldb::Cint, beta::Ptr{Cdouble}, C::Ptr{Cdouble}, ldc::Cint)::Cint
+end
+
+function dsyr2k_async(uplo, trans, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
+    @ccall libxkblas.xkblas_dsyr2k_async(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, B::Ptr{Cdouble}, ldb::Cint, beta::Ptr{Cdouble}, C::Ptr{Cdouble}, ldc::Cint)::Cint
+end
+
+function dsyrk(uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
+    @ccall libxkblas.xkblas_dsyrk(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, beta::Ptr{Cdouble}, C::Ptr{Cdouble}, ldc::Cint)::Cint
+end
+
+function dsyrk_async(uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
+    @ccall libxkblas.xkblas_dsyrk_async(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, beta::Ptr{Cdouble}, C::Ptr{Cdouble}, ldc::Cint)::Cint
+end
+
+function dtrmm(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb)
+    @ccall libxkblas.xkblas_dtrmm(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, B::Ptr{Cdouble}, ldb::Cint)::Cint
+end
+
+function dtrmm_async(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb)
+    @ccall libxkblas.xkblas_dtrmm_async(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, B::Ptr{Cdouble}, ldb::Cint)::Cint
+end
+
+function dtrsm(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb)
+    @ccall libxkblas.xkblas_dtrsm(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, B::Ptr{Cdouble}, ldb::Cint)::Cint
+end
+
+function dtrsm_async(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb)
+    @ccall libxkblas.xkblas_dtrsm_async(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, B::Ptr{Cdouble}, ldb::Cint)::Cint
+end
+
+function dtrsm_rec(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb, m_threshold)
+    @ccall libxkblas.xkblas_dtrsm_rec(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, B::Ptr{Cdouble}, ldb::Cint, m_threshold::Cint)::Cint
+end
+
+function dtrsm_rec_async(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb, m_threshold)
+    @ccall libxkblas.xkblas_dtrsm_rec_async(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, B::Ptr{Cdouble}, ldb::Cint, m_threshold::Cint)::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:220:1, please use with caution
+function dgeqrf()
+    @ccall libxkblas.xkblas_dgeqrf()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:220:1, please use with caution
+function dgeqrf_async()
+    @ccall libxkblas.xkblas_dgeqrf_async()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:221:1, please use with caution
+function dorgqr()
+    @ccall libxkblas.xkblas_dorgqr()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:221:1, please use with caution
+function dorgqr_async()
+    @ccall libxkblas.xkblas_dorgqr_async()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:222:1, please use with caution
+function dormqr()
+    @ccall libxkblas.xkblas_dormqr()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:222:1, please use with caution
+function dormqr_async()
+    @ccall libxkblas.xkblas_dormqr_async()::Cint
+end
+
+function dpotrf(uplo, n, A, lda)
+    @ccall libxkblas.xkblas_dpotrf(uplo::Cint, n::Cint, A::Ptr{Cdouble}, lda::Cint)::Cint
+end
+
 function dpotrf_async(uplo, n, A, lda)
     @ccall libxkblas.xkblas_dpotrf_async(uplo::Cint, n::Cint, A::Ptr{Cdouble}, lda::Cint)::Cint
+end
+
+function daxpy_tile(n, alpha, x, incx, y, incy, bs, device_global_id)
+    @ccall libxkblas.xkblas_daxpy_tile(n::Cint, alpha::Ptr{Cdouble}, x::Ptr{Cdouble}, incx::Cint, y::Ptr{Cdouble}, incy::Cint, bs::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function daxpy_tile_async(n, alpha, x, incx, y, incy, bs, device_global_id)
+    @ccall libxkblas.xkblas_daxpy_tile_async(n::Cint, alpha::Ptr{Cdouble}, x::Ptr{Cdouble}, incx::Cint, y::Ptr{Cdouble}, incy::Cint, bs::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function ddot_tile(n, x, incx, y, incy, temp_r, r, device_global_id)
+    @ccall libxkblas.xkblas_ddot_tile(n::Cint, x::Ptr{Cdouble}, incx::Cint, y::Ptr{Cdouble}, incy::Cint, temp_r::Ptr{Cdouble}, r::Ptr{Cdouble}, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function ddot_tile_async(n, x, incx, y, incy, temp_r, r, device_global_id)
+    @ccall libxkblas.xkblas_ddot_tile_async(n::Cint, x::Ptr{Cdouble}, incx::Cint, y::Ptr{Cdouble}, incy::Cint, temp_r::Ptr{Cdouble}, r::Ptr{Cdouble}, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function dscal_tile(n, alpha, x, incx, device_global_id)
+    @ccall libxkblas.xkblas_dscal_tile(n::Cint, alpha::Ptr{Cdouble}, x::Ptr{Cdouble}, incx::Cint, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function dscal_tile_async(n, alpha, x, incx, device_global_id)
+    @ccall libxkblas.xkblas_dscal_tile_async(n::Cint, alpha::Ptr{Cdouble}, x::Ptr{Cdouble}, incx::Cint, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function dcopyscale_tile(m, n, should_copy, IW, D, Dm, Dn, ldd, L, Lm, Ln, ldl, U, Um, Un, ldu, device_global_id)
+    @ccall libxkblas.xkblas_dcopyscale_tile(m::Csize_t, n::Csize_t, should_copy::Cint, IW::Ptr{Cint}, D::Ptr{Cdouble}, Dm::Csize_t, Dn::Csize_t, ldd::Cint, L::Ptr{Cdouble}, Lm::Csize_t, Ln::Csize_t, ldl::Cint, U::Ptr{Cdouble}, Um::Csize_t, Un::Csize_t, ldu::Cint, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function dcopyscale_tile_async(m, n, should_copy, IW, D, Dm, Dn, ldd, L, Lm, Ln, ldl, U, Um, Un, ldu, device_global_id)
+    @ccall libxkblas.xkblas_dcopyscale_tile_async(m::Csize_t, n::Csize_t, should_copy::Cint, IW::Ptr{Cint}, D::Ptr{Cdouble}, Dm::Csize_t, Dn::Csize_t, ldd::Cint, L::Ptr{Cdouble}, Lm::Csize_t, Ln::Csize_t, ldl::Cint, U::Ptr{Cdouble}, Um::Csize_t, Un::Csize_t, ldu::Cint, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function dgemv_tile(transA, m, n, alpha, A, lda, x, incx, beta, y, tm, mb, incy, device_global_id)
+    @ccall libxkblas.xkblas_dgemv_tile(transA::Cint, m::Csize_t, n::Csize_t, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, x::Ptr{Cdouble}, incx::Cint, beta::Ptr{Cdouble}, y::Ptr{Cdouble}, tm::Csize_t, mb::Csize_t, incy::Cint, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function dgemv_tile_async(transA, m, n, alpha, A, lda, x, incx, beta, y, tm, mb, incy, device_global_id)
+    @ccall libxkblas.xkblas_dgemv_tile_async(transA::Cint, m::Csize_t, n::Csize_t, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, lda::Cint, x::Ptr{Cdouble}, incx::Cint, beta::Ptr{Cdouble}, y::Ptr{Cdouble}, tm::Csize_t, mb::Csize_t, incy::Cint, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function dgemm_tile(transA, transB, m, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, B, Btm, Btn, Bmb, Bnb, ldb, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_dgemm_tile(transA::Cint, transB::Cint, m::Csize_t, n::Csize_t, k::Csize_t, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, B::Ptr{Cdouble}, Btm::Csize_t, Btn::Csize_t, Bmb::Csize_t, Bnb::Csize_t, ldb::Csize_t, beta::Ptr{Cdouble}, C::Ptr{Cdouble}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function dgemm_tile_async(transA, transB, m, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, B, Btm, Btn, Bmb, Bnb, ldb, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_dgemm_tile_async(transA::Cint, transB::Cint, m::Csize_t, n::Csize_t, k::Csize_t, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, B::Ptr{Cdouble}, Btm::Csize_t, Btn::Csize_t, Bmb::Csize_t, Bnb::Csize_t, ldb::Csize_t, beta::Ptr{Cdouble}, C::Ptr{Cdouble}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function dgemmt_tile(uplo, transA, transB, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, B, Btm, Btn, Bmb, Bnb, ldb, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_dgemmt_tile(uplo::Cint, transA::Cint, transB::Cint, n::Csize_t, k::Csize_t, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, B::Ptr{Cdouble}, Btm::Csize_t, Btn::Csize_t, Bmb::Csize_t, Bnb::Csize_t, ldb::Csize_t, beta::Ptr{Cdouble}, C::Ptr{Cdouble}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function dgemmt_tile_async(uplo, transA, transB, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, B, Btm, Btn, Bmb, Bnb, ldb, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_dgemmt_tile_async(uplo::Cint, transA::Cint, transB::Cint, n::Csize_t, k::Csize_t, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, B::Ptr{Cdouble}, Btm::Csize_t, Btn::Csize_t, Bmb::Csize_t, Bnb::Csize_t, ldb::Csize_t, beta::Ptr{Cdouble}, C::Ptr{Cdouble}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function dherk_tile(uplo, trans, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_dherk_tile(uplo::Cint, trans::Cint, n::Csize_t, k::Csize_t, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, beta::Ptr{Cdouble}, C::Ptr{Cdouble}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function dherk_tile_async(uplo, trans, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_dherk_tile_async(uplo::Cint, trans::Cint, n::Csize_t, k::Csize_t, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, beta::Ptr{Cdouble}, C::Ptr{Cdouble}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function dsyrk_tile(uplo, trans, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_dsyrk_tile(uplo::Cint, trans::Cint, n::Csize_t, k::Csize_t, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, beta::Ptr{Cdouble}, C::Ptr{Cdouble}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function dsyrk_tile_async(uplo, trans, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_dsyrk_tile_async(uplo::Cint, trans::Cint, n::Csize_t, k::Csize_t, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, beta::Ptr{Cdouble}, C::Ptr{Cdouble}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function dtrsm_tile(side, uplo, transA, diag, m, n, alpha, A, Atm, Atn, Amb, Anb, lda, B, Btm, Btn, Bmb, Bnb, ldb, device_global_id)
+    @ccall libxkblas.xkblas_dtrsm_tile(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Csize_t, n::Csize_t, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, B::Ptr{Cdouble}, Btm::Csize_t, Btn::Csize_t, Bmb::Csize_t, Bnb::Csize_t, ldb::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function dtrsm_tile_async(side, uplo, transA, diag, m, n, alpha, A, Atm, Atn, Amb, Anb, lda, B, Btm, Btn, Bmb, Bnb, ldb, device_global_id)
+    @ccall libxkblas.xkblas_dtrsm_tile_async(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Csize_t, n::Csize_t, alpha::Ptr{Cdouble}, A::Ptr{Cdouble}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, B::Ptr{Cdouble}, Btm::Csize_t, Btn::Csize_t, Bmb::Csize_t, Bnb::Csize_t, ldb::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function dpotrf_tile(uplo, n, A, Atm, Atn, Amb, Anb, lda, device_global_id)
+    @ccall libxkblas.xkblas_dpotrf_tile(uplo::Cint, n::Cint, A::Ptr{Cdouble}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function dpotrf_tile_async(uplo, n, A, Atm, Atn, Amb, Anb, lda, device_global_id)
+    @ccall libxkblas.xkblas_dpotrf_tile_async(uplo::Cint, n::Cint, A::Ptr{Cdouble}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
 end
 
 function dspmv_async(alpha, transA, index_base, index_type, nrows, ncols, nnz, format, csr_row_offsets, csr_col_indices, csr_values, X, beta, Y)
     @ccall libxkblas.xkblas_dspmv_async(alpha::Ptr{Cdouble}, transA::Cint, index_base::Cint, index_type::Cint, nrows::Cint, ncols::Cint, nnz::Cint, format::Cint, csr_row_offsets::Ptr{Cvoid}, csr_col_indices::Ptr{Cvoid}, csr_values::Ptr{Cdouble}, X::Ptr{Cdouble}, beta::Ptr{Cdouble}, Y::Ptr{Cdouble})::Cint
 end
 
+function caxpby(n, alpha, x, incx, beta, y, incy)
+    @ccall libxkblas.xkblas_caxpby(n::Cint, alpha::Ptr{ComplexF32}, x::Ptr{ComplexF32}, incx::Cint, beta::Ptr{ComplexF32}, y::Ptr{ComplexF32}, incy::Cint)::Cint
+end
+
 function caxpby_async(n, alpha, x, incx, beta, y, incy)
     @ccall libxkblas.xkblas_caxpby_async(n::Cint, alpha::Ptr{ComplexF32}, x::Ptr{ComplexF32}, incx::Cint, beta::Ptr{ComplexF32}, y::Ptr{ComplexF32}, incy::Cint)::Cint
+end
+
+function caxpy(n, alpha, x, incx, y, incy)
+    @ccall libxkblas.xkblas_caxpy(n::Cint, alpha::Ptr{ComplexF32}, x::Ptr{ComplexF32}, incx::Cint, y::Ptr{ComplexF32}, incy::Cint)::Cint
 end
 
 function caxpy_async(n, alpha, x, incx, y, incy)
     @ccall libxkblas.xkblas_caxpy_async(n::Cint, alpha::Ptr{ComplexF32}, x::Ptr{ComplexF32}, incx::Cint, y::Ptr{ComplexF32}, incy::Cint)::Cint
 end
 
+function cdot(n, x, incx, y, incy, result)
+    @ccall libxkblas.xkblas_cdot(n::Cint, x::Ptr{ComplexF32}, incx::Cint, y::Ptr{ComplexF32}, incy::Cint, result::Ptr{ComplexF32})::Cint
+end
+
 function cdot_async(n, x, incx, y, incy, result)
     @ccall libxkblas.xkblas_cdot_async(n::Cint, x::Ptr{ComplexF32}, incx::Cint, y::Ptr{ComplexF32}, incy::Cint, result::Ptr{ComplexF32})::Cint
 end
 
-# no prototype is found for this function at ckernels.h:52:9, please use with caution
+# no prototype is found for this function at for-all-kernels.h:57:1, please use with caution
+function cdivcopy()
+    @ccall libxkblas.xkblas_cdivcopy()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:57:1, please use with caution
 function cdivcopy_async()
     @ccall libxkblas.xkblas_cdivcopy_async()::Cint
 end
@@ -313,80 +762,284 @@ function cfill(n, x, v)
     @ccall libxkblas.xkblas_cfill(n::Cint, x::Ptr{ComplexF32}, v::ComplexF32)::Cint
 end
 
+function cfill_async(n, x, v)
+    @ccall libxkblas.xkblas_cfill_async(n::Cint, x::Ptr{ComplexF32}, v::ComplexF32)::Cint
+end
+
+function cnrm2(n, x, result)
+    @ccall libxkblas.xkblas_cnrm2(n::Cint, x::Ptr{ComplexF32}, result::Ptr{Cfloat})::Cint
+end
+
 function cnrm2_async(n, x, result)
     @ccall libxkblas.xkblas_cnrm2_async(n::Cint, x::Ptr{ComplexF32}, result::Ptr{Cfloat})::Cint
 end
 
-# no prototype is found for this function at ckernels.h:58:9, please use with caution
+# no prototype is found for this function at for-all-kernels.h:63:1, please use with caution
+function cscalcopy()
+    @ccall libxkblas.xkblas_cscalcopy()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:63:1, please use with caution
 function cscalcopy_async()
     @ccall libxkblas.xkblas_cscalcopy_async()::Cint
+end
+
+function cscal(n, alpha, x, incx)
+    @ccall libxkblas.xkblas_cscal(n::Cint, alpha::Ptr{ComplexF32}, x::Ptr{ComplexF32}, incx::Cint)::Cint
 end
 
 function cscal_async(n, alpha, x, incx)
     @ccall libxkblas.xkblas_cscal_async(n::Cint, alpha::Ptr{ComplexF32}, x::Ptr{ComplexF32}, incx::Cint)::Cint
 end
 
+function ccopyscale(m, n, should_copy, IW, D, ldd, L, ldl, U, ldu)
+    @ccall libxkblas.xkblas_ccopyscale(m::Cint, n::Cint, should_copy::Cint, IW::Ptr{Cint}, D::Ptr{ComplexF32}, ldd::Cint, L::Ptr{ComplexF32}, ldl::Cint, U::Ptr{ComplexF32}, ldu::Cint)::Cint
+end
+
 function ccopyscale_async(m, n, should_copy, IW, D, ldd, L, ldl, U, ldu)
     @ccall libxkblas.xkblas_ccopyscale_async(m::Cint, n::Cint, should_copy::Cint, IW::Ptr{Cint}, D::Ptr{ComplexF32}, ldd::Cint, L::Ptr{ComplexF32}, ldl::Cint, U::Ptr{ComplexF32}, ldu::Cint)::Cint
+end
+
+function cgemv(transA, m, n, alpha, A, lda, x, incx, beta, y, incy)
+    @ccall libxkblas.xkblas_cgemv(transA::Cint, m::Cint, n::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, x::Ptr{ComplexF32}, incx::Cint, beta::Ptr{ComplexF32}, y::Ptr{ComplexF32}, incy::Cint)::Cint
 end
 
 function cgemv_async(transA, m, n, alpha, A, lda, x, incx, beta, y, incy)
     @ccall libxkblas.xkblas_cgemv_async(transA::Cint, m::Cint, n::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, x::Ptr{ComplexF32}, incx::Cint, beta::Ptr{ComplexF32}, y::Ptr{ComplexF32}, incy::Cint)::Cint
 end
 
+function cgemm(transA, transB, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
+    @ccall libxkblas.xkblas_cgemm(transA::Cint, transB::Cint, m::Cint, n::Cint, k::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
+end
+
 function cgemm_async(transA, transB, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
     @ccall libxkblas.xkblas_cgemm_async(transA::Cint, transB::Cint, m::Cint, n::Cint, k::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
+end
+
+function cgemmt(uplo, transA, transB, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
+    @ccall libxkblas.xkblas_cgemmt(uplo::Cint, transA::Cint, transB::Cint, n::Cint, k::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
 end
 
 function cgemmt_async(uplo, transA, transB, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
     @ccall libxkblas.xkblas_cgemmt_async(uplo::Cint, transA::Cint, transB::Cint, n::Cint, k::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
 end
 
-function cherk_async(uplo, transA, n, k, alpha, A, lda, beta, C, ldc)
-    @ccall libxkblas.xkblas_cherk_async(uplo::Cint, transA::Cint, n::Cint, k::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
+function cherk(uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
+    @ccall libxkblas.xkblas_cherk(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{Cfloat}, A::Ptr{ComplexF32}, lda::Cint, beta::Ptr{Cfloat}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
 end
 
-function csyrk_async(uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
-    @ccall libxkblas.xkblas_csyrk_async(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
+function cherk_async(uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
+    @ccall libxkblas.xkblas_cherk_async(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{Cfloat}, A::Ptr{ComplexF32}, lda::Cint, beta::Ptr{Cfloat}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
 end
 
-function ctrsm_async(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb)
-    @ccall libxkblas.xkblas_ctrsm_async(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint)::Cint
-end
-
-function ctrmm_async(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb)
-    @ccall libxkblas.xkblas_ctrmm_async(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint)::Cint
-end
-
-function csyr2k_async(uplo, trans, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
-    @ccall libxkblas.xkblas_csyr2k_async(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
+function csymm(side, uplo, m, n, alpha, A, lda, B, ldb, beta, C, ldc)
+    @ccall libxkblas.xkblas_csymm(side::Cint, uplo::Cint, m::Cint, n::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
 end
 
 function csymm_async(side, uplo, m, n, alpha, A, lda, B, ldb, beta, C, ldc)
     @ccall libxkblas.xkblas_csymm_async(side::Cint, uplo::Cint, m::Cint, n::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
 end
 
+function csyr2k(uplo, trans, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
+    @ccall libxkblas.xkblas_csyr2k(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
+end
+
+function csyr2k_async(uplo, trans, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
+    @ccall libxkblas.xkblas_csyr2k_async(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
+end
+
+function csyrk(uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
+    @ccall libxkblas.xkblas_csyrk(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
+end
+
+function csyrk_async(uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
+    @ccall libxkblas.xkblas_csyrk_async(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
+end
+
+function ctrmm(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb)
+    @ccall libxkblas.xkblas_ctrmm(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint)::Cint
+end
+
+function ctrmm_async(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb)
+    @ccall libxkblas.xkblas_ctrmm_async(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint)::Cint
+end
+
+function ctrsm(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb)
+    @ccall libxkblas.xkblas_ctrsm(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint)::Cint
+end
+
+function ctrsm_async(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb)
+    @ccall libxkblas.xkblas_ctrsm_async(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint)::Cint
+end
+
+function ctrsm_rec(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb, m_threshold)
+    @ccall libxkblas.xkblas_ctrsm_rec(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint, m_threshold::Cint)::Cint
+end
+
+function ctrsm_rec_async(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb, m_threshold)
+    @ccall libxkblas.xkblas_ctrsm_rec_async(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint, m_threshold::Cint)::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:220:1, please use with caution
+function cgeqrf()
+    @ccall libxkblas.xkblas_cgeqrf()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:220:1, please use with caution
+function cgeqrf_async()
+    @ccall libxkblas.xkblas_cgeqrf_async()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:221:1, please use with caution
+function corgqr()
+    @ccall libxkblas.xkblas_corgqr()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:221:1, please use with caution
+function corgqr_async()
+    @ccall libxkblas.xkblas_corgqr_async()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:222:1, please use with caution
+function cormqr()
+    @ccall libxkblas.xkblas_cormqr()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:222:1, please use with caution
+function cormqr_async()
+    @ccall libxkblas.xkblas_cormqr_async()::Cint
+end
+
+function cpotrf(uplo, n, A, lda)
+    @ccall libxkblas.xkblas_cpotrf(uplo::Cint, n::Cint, A::Ptr{ComplexF32}, lda::Cint)::Cint
+end
+
 function cpotrf_async(uplo, n, A, lda)
     @ccall libxkblas.xkblas_cpotrf_async(uplo::Cint, n::Cint, A::Ptr{ComplexF32}, lda::Cint)::Cint
+end
+
+function caxpy_tile(n, alpha, x, incx, y, incy, bs, device_global_id)
+    @ccall libxkblas.xkblas_caxpy_tile(n::Cint, alpha::Ptr{ComplexF32}, x::Ptr{ComplexF32}, incx::Cint, y::Ptr{ComplexF32}, incy::Cint, bs::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function caxpy_tile_async(n, alpha, x, incx, y, incy, bs, device_global_id)
+    @ccall libxkblas.xkblas_caxpy_tile_async(n::Cint, alpha::Ptr{ComplexF32}, x::Ptr{ComplexF32}, incx::Cint, y::Ptr{ComplexF32}, incy::Cint, bs::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function cdot_tile(n, x, incx, y, incy, temp_r, r, device_global_id)
+    @ccall libxkblas.xkblas_cdot_tile(n::Cint, x::Ptr{ComplexF32}, incx::Cint, y::Ptr{ComplexF32}, incy::Cint, temp_r::Ptr{ComplexF32}, r::Ptr{ComplexF32}, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function cdot_tile_async(n, x, incx, y, incy, temp_r, r, device_global_id)
+    @ccall libxkblas.xkblas_cdot_tile_async(n::Cint, x::Ptr{ComplexF32}, incx::Cint, y::Ptr{ComplexF32}, incy::Cint, temp_r::Ptr{ComplexF32}, r::Ptr{ComplexF32}, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function cscal_tile(n, alpha, x, incx, device_global_id)
+    @ccall libxkblas.xkblas_cscal_tile(n::Cint, alpha::Ptr{ComplexF32}, x::Ptr{ComplexF32}, incx::Cint, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function cscal_tile_async(n, alpha, x, incx, device_global_id)
+    @ccall libxkblas.xkblas_cscal_tile_async(n::Cint, alpha::Ptr{ComplexF32}, x::Ptr{ComplexF32}, incx::Cint, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function ccopyscale_tile(m, n, should_copy, IW, D, Dm, Dn, ldd, L, Lm, Ln, ldl, U, Um, Un, ldu, device_global_id)
+    @ccall libxkblas.xkblas_ccopyscale_tile(m::Csize_t, n::Csize_t, should_copy::Cint, IW::Ptr{Cint}, D::Ptr{ComplexF32}, Dm::Csize_t, Dn::Csize_t, ldd::Cint, L::Ptr{ComplexF32}, Lm::Csize_t, Ln::Csize_t, ldl::Cint, U::Ptr{ComplexF32}, Um::Csize_t, Un::Csize_t, ldu::Cint, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function ccopyscale_tile_async(m, n, should_copy, IW, D, Dm, Dn, ldd, L, Lm, Ln, ldl, U, Um, Un, ldu, device_global_id)
+    @ccall libxkblas.xkblas_ccopyscale_tile_async(m::Csize_t, n::Csize_t, should_copy::Cint, IW::Ptr{Cint}, D::Ptr{ComplexF32}, Dm::Csize_t, Dn::Csize_t, ldd::Cint, L::Ptr{ComplexF32}, Lm::Csize_t, Ln::Csize_t, ldl::Cint, U::Ptr{ComplexF32}, Um::Csize_t, Un::Csize_t, ldu::Cint, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function cgemv_tile(transA, m, n, alpha, A, lda, x, incx, beta, y, tm, mb, incy, device_global_id)
+    @ccall libxkblas.xkblas_cgemv_tile(transA::Cint, m::Csize_t, n::Csize_t, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, x::Ptr{ComplexF32}, incx::Cint, beta::Ptr{ComplexF32}, y::Ptr{ComplexF32}, tm::Csize_t, mb::Csize_t, incy::Cint, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function cgemv_tile_async(transA, m, n, alpha, A, lda, x, incx, beta, y, tm, mb, incy, device_global_id)
+    @ccall libxkblas.xkblas_cgemv_tile_async(transA::Cint, m::Csize_t, n::Csize_t, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, x::Ptr{ComplexF32}, incx::Cint, beta::Ptr{ComplexF32}, y::Ptr{ComplexF32}, tm::Csize_t, mb::Csize_t, incy::Cint, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function cgemm_tile(transA, transB, m, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, B, Btm, Btn, Bmb, Bnb, ldb, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_cgemm_tile(transA::Cint, transB::Cint, m::Csize_t, n::Csize_t, k::Csize_t, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, B::Ptr{ComplexF32}, Btm::Csize_t, Btn::Csize_t, Bmb::Csize_t, Bnb::Csize_t, ldb::Csize_t, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function cgemm_tile_async(transA, transB, m, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, B, Btm, Btn, Bmb, Bnb, ldb, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_cgemm_tile_async(transA::Cint, transB::Cint, m::Csize_t, n::Csize_t, k::Csize_t, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, B::Ptr{ComplexF32}, Btm::Csize_t, Btn::Csize_t, Bmb::Csize_t, Bnb::Csize_t, ldb::Csize_t, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function cgemmt_tile(uplo, transA, transB, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, B, Btm, Btn, Bmb, Bnb, ldb, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_cgemmt_tile(uplo::Cint, transA::Cint, transB::Cint, n::Csize_t, k::Csize_t, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, B::Ptr{ComplexF32}, Btm::Csize_t, Btn::Csize_t, Bmb::Csize_t, Bnb::Csize_t, ldb::Csize_t, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function cgemmt_tile_async(uplo, transA, transB, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, B, Btm, Btn, Bmb, Bnb, ldb, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_cgemmt_tile_async(uplo::Cint, transA::Cint, transB::Cint, n::Csize_t, k::Csize_t, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, B::Ptr{ComplexF32}, Btm::Csize_t, Btn::Csize_t, Bmb::Csize_t, Bnb::Csize_t, ldb::Csize_t, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function cherk_tile(uplo, trans, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_cherk_tile(uplo::Cint, trans::Cint, n::Csize_t, k::Csize_t, alpha::Ptr{Cfloat}, A::Ptr{ComplexF32}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, beta::Ptr{Cfloat}, C::Ptr{ComplexF32}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function cherk_tile_async(uplo, trans, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_cherk_tile_async(uplo::Cint, trans::Cint, n::Csize_t, k::Csize_t, alpha::Ptr{Cfloat}, A::Ptr{ComplexF32}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, beta::Ptr{Cfloat}, C::Ptr{ComplexF32}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function csyrk_tile(uplo, trans, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_csyrk_tile(uplo::Cint, trans::Cint, n::Csize_t, k::Csize_t, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function csyrk_tile_async(uplo, trans, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_csyrk_tile_async(uplo::Cint, trans::Cint, n::Csize_t, k::Csize_t, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function ctrsm_tile(side, uplo, transA, diag, m, n, alpha, A, Atm, Atn, Amb, Anb, lda, B, Btm, Btn, Bmb, Bnb, ldb, device_global_id)
+    @ccall libxkblas.xkblas_ctrsm_tile(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Csize_t, n::Csize_t, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, B::Ptr{ComplexF32}, Btm::Csize_t, Btn::Csize_t, Bmb::Csize_t, Bnb::Csize_t, ldb::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function ctrsm_tile_async(side, uplo, transA, diag, m, n, alpha, A, Atm, Atn, Amb, Anb, lda, B, Btm, Btn, Bmb, Bnb, ldb, device_global_id)
+    @ccall libxkblas.xkblas_ctrsm_tile_async(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Csize_t, n::Csize_t, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, B::Ptr{ComplexF32}, Btm::Csize_t, Btn::Csize_t, Bmb::Csize_t, Bnb::Csize_t, ldb::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function cpotrf_tile(uplo, n, A, Atm, Atn, Amb, Anb, lda, device_global_id)
+    @ccall libxkblas.xkblas_cpotrf_tile(uplo::Cint, n::Cint, A::Ptr{ComplexF32}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function cpotrf_tile_async(uplo, n, A, Atm, Atn, Amb, Anb, lda, device_global_id)
+    @ccall libxkblas.xkblas_cpotrf_tile_async(uplo::Cint, n::Cint, A::Ptr{ComplexF32}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
 end
 
 function cspmv_async(alpha, transA, index_base, index_type, nrows, ncols, nnz, format, csr_row_offsets, csr_col_indices, csr_values, X, beta, Y)
     @ccall libxkblas.xkblas_cspmv_async(alpha::Ptr{ComplexF32}, transA::Cint, index_base::Cint, index_type::Cint, nrows::Cint, ncols::Cint, nnz::Cint, format::Cint, csr_row_offsets::Ptr{Cvoid}, csr_col_indices::Ptr{Cvoid}, csr_values::Ptr{ComplexF32}, X::Ptr{ComplexF32}, beta::Ptr{ComplexF32}, Y::Ptr{ComplexF32})::Cint
 end
 
+function zaxpby(n, alpha, x, incx, beta, y, incy)
+    @ccall libxkblas.xkblas_zaxpby(n::Cint, alpha::Ptr{ComplexF32}, x::Ptr{ComplexF32}, incx::Cint, beta::Ptr{ComplexF32}, y::Ptr{ComplexF32}, incy::Cint)::Cint
+end
+
 function zaxpby_async(n, alpha, x, incx, beta, y, incy)
     @ccall libxkblas.xkblas_zaxpby_async(n::Cint, alpha::Ptr{ComplexF32}, x::Ptr{ComplexF32}, incx::Cint, beta::Ptr{ComplexF32}, y::Ptr{ComplexF32}, incy::Cint)::Cint
+end
+
+function zaxpy(n, alpha, x, incx, y, incy)
+    @ccall libxkblas.xkblas_zaxpy(n::Cint, alpha::Ptr{ComplexF32}, x::Ptr{ComplexF32}, incx::Cint, y::Ptr{ComplexF32}, incy::Cint)::Cint
 end
 
 function zaxpy_async(n, alpha, x, incx, y, incy)
     @ccall libxkblas.xkblas_zaxpy_async(n::Cint, alpha::Ptr{ComplexF32}, x::Ptr{ComplexF32}, incx::Cint, y::Ptr{ComplexF32}, incy::Cint)::Cint
 end
 
+function zdot(n, x, incx, y, incy, result)
+    @ccall libxkblas.xkblas_zdot(n::Cint, x::Ptr{ComplexF32}, incx::Cint, y::Ptr{ComplexF32}, incy::Cint, result::Ptr{ComplexF32})::Cint
+end
+
 function zdot_async(n, x, incx, y, incy, result)
     @ccall libxkblas.xkblas_zdot_async(n::Cint, x::Ptr{ComplexF32}, incx::Cint, y::Ptr{ComplexF32}, incy::Cint, result::Ptr{ComplexF32})::Cint
 end
 
-# no prototype is found for this function at zkernels.h:52:9, please use with caution
+# no prototype is found for this function at for-all-kernels.h:57:1, please use with caution
+function zdivcopy()
+    @ccall libxkblas.xkblas_zdivcopy()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:57:1, please use with caution
 function zdivcopy_async()
     @ccall libxkblas.xkblas_zdivcopy_async()::Cint
 end
@@ -395,61 +1048,248 @@ function zfill(n, x, v)
     @ccall libxkblas.xkblas_zfill(n::Cint, x::Ptr{ComplexF32}, v::ComplexF32)::Cint
 end
 
+function zfill_async(n, x, v)
+    @ccall libxkblas.xkblas_zfill_async(n::Cint, x::Ptr{ComplexF32}, v::ComplexF32)::Cint
+end
+
+function znrm2(n, x, result)
+    @ccall libxkblas.xkblas_znrm2(n::Cint, x::Ptr{ComplexF32}, result::Ptr{Cfloat})::Cint
+end
+
 function znrm2_async(n, x, result)
     @ccall libxkblas.xkblas_znrm2_async(n::Cint, x::Ptr{ComplexF32}, result::Ptr{Cfloat})::Cint
 end
 
-# no prototype is found for this function at zkernels.h:58:9, please use with caution
+# no prototype is found for this function at for-all-kernels.h:63:1, please use with caution
+function zscalcopy()
+    @ccall libxkblas.xkblas_zscalcopy()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:63:1, please use with caution
 function zscalcopy_async()
     @ccall libxkblas.xkblas_zscalcopy_async()::Cint
+end
+
+function zscal(n, alpha, x, incx)
+    @ccall libxkblas.xkblas_zscal(n::Cint, alpha::Ptr{ComplexF32}, x::Ptr{ComplexF32}, incx::Cint)::Cint
 end
 
 function zscal_async(n, alpha, x, incx)
     @ccall libxkblas.xkblas_zscal_async(n::Cint, alpha::Ptr{ComplexF32}, x::Ptr{ComplexF32}, incx::Cint)::Cint
 end
 
+function zcopyscale(m, n, should_copy, IW, D, ldd, L, ldl, U, ldu)
+    @ccall libxkblas.xkblas_zcopyscale(m::Cint, n::Cint, should_copy::Cint, IW::Ptr{Cint}, D::Ptr{ComplexF32}, ldd::Cint, L::Ptr{ComplexF32}, ldl::Cint, U::Ptr{ComplexF32}, ldu::Cint)::Cint
+end
+
 function zcopyscale_async(m, n, should_copy, IW, D, ldd, L, ldl, U, ldu)
     @ccall libxkblas.xkblas_zcopyscale_async(m::Cint, n::Cint, should_copy::Cint, IW::Ptr{Cint}, D::Ptr{ComplexF32}, ldd::Cint, L::Ptr{ComplexF32}, ldl::Cint, U::Ptr{ComplexF32}, ldu::Cint)::Cint
+end
+
+function zgemv(transA, m, n, alpha, A, lda, x, incx, beta, y, incy)
+    @ccall libxkblas.xkblas_zgemv(transA::Cint, m::Cint, n::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, x::Ptr{ComplexF32}, incx::Cint, beta::Ptr{ComplexF32}, y::Ptr{ComplexF32}, incy::Cint)::Cint
 end
 
 function zgemv_async(transA, m, n, alpha, A, lda, x, incx, beta, y, incy)
     @ccall libxkblas.xkblas_zgemv_async(transA::Cint, m::Cint, n::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, x::Ptr{ComplexF32}, incx::Cint, beta::Ptr{ComplexF32}, y::Ptr{ComplexF32}, incy::Cint)::Cint
 end
 
+function zgemm(transA, transB, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
+    @ccall libxkblas.xkblas_zgemm(transA::Cint, transB::Cint, m::Cint, n::Cint, k::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
+end
+
 function zgemm_async(transA, transB, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
     @ccall libxkblas.xkblas_zgemm_async(transA::Cint, transB::Cint, m::Cint, n::Cint, k::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
+end
+
+function zgemmt(uplo, transA, transB, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
+    @ccall libxkblas.xkblas_zgemmt(uplo::Cint, transA::Cint, transB::Cint, n::Cint, k::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
 end
 
 function zgemmt_async(uplo, transA, transB, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
     @ccall libxkblas.xkblas_zgemmt_async(uplo::Cint, transA::Cint, transB::Cint, n::Cint, k::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
 end
 
-function zherk_async(uplo, transA, n, k, alpha, A, lda, beta, C, ldc)
-    @ccall libxkblas.xkblas_zherk_async(uplo::Cint, transA::Cint, n::Cint, k::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
+function zherk(uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
+    @ccall libxkblas.xkblas_zherk(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{Cdouble}, A::Ptr{ComplexF32}, lda::Cint, beta::Ptr{Cdouble}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
 end
 
-function zsyrk_async(uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
-    @ccall libxkblas.xkblas_zsyrk_async(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
+function zherk_async(uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
+    @ccall libxkblas.xkblas_zherk_async(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{Cdouble}, A::Ptr{ComplexF32}, lda::Cint, beta::Ptr{Cdouble}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
 end
 
-function ztrsm_async(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb)
-    @ccall libxkblas.xkblas_ztrsm_async(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint)::Cint
-end
-
-function ztrmm_async(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb)
-    @ccall libxkblas.xkblas_ztrmm_async(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint)::Cint
-end
-
-function zsyr2k_async(uplo, trans, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
-    @ccall libxkblas.xkblas_zsyr2k_async(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
+function zsymm(side, uplo, m, n, alpha, A, lda, B, ldb, beta, C, ldc)
+    @ccall libxkblas.xkblas_zsymm(side::Cint, uplo::Cint, m::Cint, n::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
 end
 
 function zsymm_async(side, uplo, m, n, alpha, A, lda, B, ldb, beta, C, ldc)
     @ccall libxkblas.xkblas_zsymm_async(side::Cint, uplo::Cint, m::Cint, n::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
 end
 
+function zsyr2k(uplo, trans, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
+    @ccall libxkblas.xkblas_zsyr2k(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
+end
+
+function zsyr2k_async(uplo, trans, n, k, alpha, A, lda, B, ldb, beta, C, ldc)
+    @ccall libxkblas.xkblas_zsyr2k_async(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
+end
+
+function zsyrk(uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
+    @ccall libxkblas.xkblas_zsyrk(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
+end
+
+function zsyrk_async(uplo, trans, n, k, alpha, A, lda, beta, C, ldc)
+    @ccall libxkblas.xkblas_zsyrk_async(uplo::Cint, trans::Cint, n::Cint, k::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, ldc::Cint)::Cint
+end
+
+function ztrmm(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb)
+    @ccall libxkblas.xkblas_ztrmm(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint)::Cint
+end
+
+function ztrmm_async(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb)
+    @ccall libxkblas.xkblas_ztrmm_async(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint)::Cint
+end
+
+function ztrsm(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb)
+    @ccall libxkblas.xkblas_ztrsm(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint)::Cint
+end
+
+function ztrsm_async(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb)
+    @ccall libxkblas.xkblas_ztrsm_async(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint)::Cint
+end
+
+function ztrsm_rec(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb, m_threshold)
+    @ccall libxkblas.xkblas_ztrsm_rec(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint, m_threshold::Cint)::Cint
+end
+
+function ztrsm_rec_async(side, uplo, transA, diag, m, n, alpha, A, lda, B, ldb, m_threshold)
+    @ccall libxkblas.xkblas_ztrsm_rec_async(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Cint, n::Cint, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, B::Ptr{ComplexF32}, ldb::Cint, m_threshold::Cint)::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:220:1, please use with caution
+function zgeqrf()
+    @ccall libxkblas.xkblas_zgeqrf()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:220:1, please use with caution
+function zgeqrf_async()
+    @ccall libxkblas.xkblas_zgeqrf_async()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:221:1, please use with caution
+function zorgqr()
+    @ccall libxkblas.xkblas_zorgqr()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:221:1, please use with caution
+function zorgqr_async()
+    @ccall libxkblas.xkblas_zorgqr_async()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:222:1, please use with caution
+function zormqr()
+    @ccall libxkblas.xkblas_zormqr()::Cint
+end
+
+# no prototype is found for this function at for-all-kernels.h:222:1, please use with caution
+function zormqr_async()
+    @ccall libxkblas.xkblas_zormqr_async()::Cint
+end
+
+function zpotrf(uplo, n, A, lda)
+    @ccall libxkblas.xkblas_zpotrf(uplo::Cint, n::Cint, A::Ptr{ComplexF32}, lda::Cint)::Cint
+end
+
 function zpotrf_async(uplo, n, A, lda)
     @ccall libxkblas.xkblas_zpotrf_async(uplo::Cint, n::Cint, A::Ptr{ComplexF32}, lda::Cint)::Cint
+end
+
+function zaxpy_tile(n, alpha, x, incx, y, incy, bs, device_global_id)
+    @ccall libxkblas.xkblas_zaxpy_tile(n::Cint, alpha::Ptr{ComplexF32}, x::Ptr{ComplexF32}, incx::Cint, y::Ptr{ComplexF32}, incy::Cint, bs::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function zaxpy_tile_async(n, alpha, x, incx, y, incy, bs, device_global_id)
+    @ccall libxkblas.xkblas_zaxpy_tile_async(n::Cint, alpha::Ptr{ComplexF32}, x::Ptr{ComplexF32}, incx::Cint, y::Ptr{ComplexF32}, incy::Cint, bs::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function zdot_tile(n, x, incx, y, incy, temp_r, r, device_global_id)
+    @ccall libxkblas.xkblas_zdot_tile(n::Cint, x::Ptr{ComplexF32}, incx::Cint, y::Ptr{ComplexF32}, incy::Cint, temp_r::Ptr{ComplexF32}, r::Ptr{ComplexF32}, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function zdot_tile_async(n, x, incx, y, incy, temp_r, r, device_global_id)
+    @ccall libxkblas.xkblas_zdot_tile_async(n::Cint, x::Ptr{ComplexF32}, incx::Cint, y::Ptr{ComplexF32}, incy::Cint, temp_r::Ptr{ComplexF32}, r::Ptr{ComplexF32}, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function zscal_tile(n, alpha, x, incx, device_global_id)
+    @ccall libxkblas.xkblas_zscal_tile(n::Cint, alpha::Ptr{ComplexF32}, x::Ptr{ComplexF32}, incx::Cint, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function zscal_tile_async(n, alpha, x, incx, device_global_id)
+    @ccall libxkblas.xkblas_zscal_tile_async(n::Cint, alpha::Ptr{ComplexF32}, x::Ptr{ComplexF32}, incx::Cint, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function zcopyscale_tile(m, n, should_copy, IW, D, Dm, Dn, ldd, L, Lm, Ln, ldl, U, Um, Un, ldu, device_global_id)
+    @ccall libxkblas.xkblas_zcopyscale_tile(m::Csize_t, n::Csize_t, should_copy::Cint, IW::Ptr{Cint}, D::Ptr{ComplexF32}, Dm::Csize_t, Dn::Csize_t, ldd::Cint, L::Ptr{ComplexF32}, Lm::Csize_t, Ln::Csize_t, ldl::Cint, U::Ptr{ComplexF32}, Um::Csize_t, Un::Csize_t, ldu::Cint, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function zcopyscale_tile_async(m, n, should_copy, IW, D, Dm, Dn, ldd, L, Lm, Ln, ldl, U, Um, Un, ldu, device_global_id)
+    @ccall libxkblas.xkblas_zcopyscale_tile_async(m::Csize_t, n::Csize_t, should_copy::Cint, IW::Ptr{Cint}, D::Ptr{ComplexF32}, Dm::Csize_t, Dn::Csize_t, ldd::Cint, L::Ptr{ComplexF32}, Lm::Csize_t, Ln::Csize_t, ldl::Cint, U::Ptr{ComplexF32}, Um::Csize_t, Un::Csize_t, ldu::Cint, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function zgemv_tile(transA, m, n, alpha, A, lda, x, incx, beta, y, tm, mb, incy, device_global_id)
+    @ccall libxkblas.xkblas_zgemv_tile(transA::Cint, m::Csize_t, n::Csize_t, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, x::Ptr{ComplexF32}, incx::Cint, beta::Ptr{ComplexF32}, y::Ptr{ComplexF32}, tm::Csize_t, mb::Csize_t, incy::Cint, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function zgemv_tile_async(transA, m, n, alpha, A, lda, x, incx, beta, y, tm, mb, incy, device_global_id)
+    @ccall libxkblas.xkblas_zgemv_tile_async(transA::Cint, m::Csize_t, n::Csize_t, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, lda::Cint, x::Ptr{ComplexF32}, incx::Cint, beta::Ptr{ComplexF32}, y::Ptr{ComplexF32}, tm::Csize_t, mb::Csize_t, incy::Cint, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function zgemm_tile(transA, transB, m, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, B, Btm, Btn, Bmb, Bnb, ldb, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_zgemm_tile(transA::Cint, transB::Cint, m::Csize_t, n::Csize_t, k::Csize_t, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, B::Ptr{ComplexF32}, Btm::Csize_t, Btn::Csize_t, Bmb::Csize_t, Bnb::Csize_t, ldb::Csize_t, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function zgemm_tile_async(transA, transB, m, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, B, Btm, Btn, Bmb, Bnb, ldb, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_zgemm_tile_async(transA::Cint, transB::Cint, m::Csize_t, n::Csize_t, k::Csize_t, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, B::Ptr{ComplexF32}, Btm::Csize_t, Btn::Csize_t, Bmb::Csize_t, Bnb::Csize_t, ldb::Csize_t, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function zgemmt_tile(uplo, transA, transB, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, B, Btm, Btn, Bmb, Bnb, ldb, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_zgemmt_tile(uplo::Cint, transA::Cint, transB::Cint, n::Csize_t, k::Csize_t, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, B::Ptr{ComplexF32}, Btm::Csize_t, Btn::Csize_t, Bmb::Csize_t, Bnb::Csize_t, ldb::Csize_t, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function zgemmt_tile_async(uplo, transA, transB, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, B, Btm, Btn, Bmb, Bnb, ldb, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_zgemmt_tile_async(uplo::Cint, transA::Cint, transB::Cint, n::Csize_t, k::Csize_t, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, B::Ptr{ComplexF32}, Btm::Csize_t, Btn::Csize_t, Bmb::Csize_t, Bnb::Csize_t, ldb::Csize_t, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function zherk_tile(uplo, trans, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_zherk_tile(uplo::Cint, trans::Cint, n::Csize_t, k::Csize_t, alpha::Ptr{Cdouble}, A::Ptr{ComplexF32}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, beta::Ptr{Cdouble}, C::Ptr{ComplexF32}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function zherk_tile_async(uplo, trans, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_zherk_tile_async(uplo::Cint, trans::Cint, n::Csize_t, k::Csize_t, alpha::Ptr{Cdouble}, A::Ptr{ComplexF32}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, beta::Ptr{Cdouble}, C::Ptr{ComplexF32}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function zsyrk_tile(uplo, trans, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_zsyrk_tile(uplo::Cint, trans::Cint, n::Csize_t, k::Csize_t, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function zsyrk_tile_async(uplo, trans, n, k, alpha, A, Atm, Atn, Amb, Anb, lda, beta, C, Ctm, Ctn, Cmb, Cnb, ldc, device_global_id)
+    @ccall libxkblas.xkblas_zsyrk_tile_async(uplo::Cint, trans::Cint, n::Csize_t, k::Csize_t, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, beta::Ptr{ComplexF32}, C::Ptr{ComplexF32}, Ctm::Csize_t, Ctn::Csize_t, Cmb::Csize_t, Cnb::Csize_t, ldc::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function ztrsm_tile(side, uplo, transA, diag, m, n, alpha, A, Atm, Atn, Amb, Anb, lda, B, Btm, Btn, Bmb, Bnb, ldb, device_global_id)
+    @ccall libxkblas.xkblas_ztrsm_tile(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Csize_t, n::Csize_t, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, B::Ptr{ComplexF32}, Btm::Csize_t, Btn::Csize_t, Bmb::Csize_t, Bnb::Csize_t, ldb::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function ztrsm_tile_async(side, uplo, transA, diag, m, n, alpha, A, Atm, Atn, Amb, Anb, lda, B, Btm, Btn, Bmb, Bnb, ldb, device_global_id)
+    @ccall libxkblas.xkblas_ztrsm_tile_async(side::Cint, uplo::Cint, transA::Cint, diag::Cint, m::Csize_t, n::Csize_t, alpha::Ptr{ComplexF32}, A::Ptr{ComplexF32}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, B::Ptr{ComplexF32}, Btm::Csize_t, Btn::Csize_t, Bmb::Csize_t, Bnb::Csize_t, ldb::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function zpotrf_tile(uplo, n, A, Atm, Atn, Amb, Anb, lda, device_global_id)
+    @ccall libxkblas.xkblas_zpotrf_tile(uplo::Cint, n::Cint, A::Ptr{ComplexF32}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
+end
+
+function zpotrf_tile_async(uplo, n, A, Atm, Atn, Amb, Anb, lda, device_global_id)
+    @ccall libxkblas.xkblas_zpotrf_tile_async(uplo::Cint, n::Cint, A::Ptr{ComplexF32}, Atm::Csize_t, Atn::Csize_t, Amb::Csize_t, Anb::Csize_t, lda::Csize_t, device_global_id::xkrt_device_global_id_t)::Cint
 end
 
 function zspmv_async(alpha, transA, index_base, index_type, nrows, ncols, nnz, format, csr_row_offsets, csr_col_indices, csr_values, X, beta, Y)
@@ -1078,6 +1918,40 @@ end
 function blas2cblas_diag(diag)
     @ccall libxkblas.xkblas_blas2cblas_diag(diag::Cstring)::Cint
 end
+
+const XKRT_DEVICES_MAX = 16
+
+const XKRT_DEVICE_MEMORIES_MAX = 1
+
+const XKRT_INSTRUCTION_CALLBACKS_MAX = 2
+
+const XKRT_DEVICES_PERF_RANK_MAX = 4
+
+const HOST_DEVICE_GLOBAL_ID = 0
+
+const UNSPECIFIED_DEVICE_GLOBAL_ID = XKRT_DEVICES_MAX
+
+const XKRT_DEVICES_MASK_ALL = ~(xkrt_device_global_id_bitfield_t(0))
+
+const XKRT_MAX_THREADS_PER_DEVICE = 16
+
+const THREAD_MAX_MEMORY = size_t(4) * 1024 * 1024 * 1024
+
+const TASK_MAX_ACCESSES = 1024
+
+const UNSPECIFIED_TASK_ACCESS = xkrt_task_access_counter_type_t(TASK_MAX_ACCESSES)
+
+xkstatic_assert(X) = _Static_assert(X, "")
+
+const XKTYPE = Float32
+
+const XKTYPE_REAL = Float32
+
+const XKDEVICE = xkrt_device_global_id_t
+
+# Skipping MacroDefinition: XKDEF ( RTYPE , NAME , ... ) RTYPE xkblas_s ## NAME ( __VA_ARGS__ ) ; RTYPE xkblas_s ## NAME ## _async ( __VA_ARGS__ ) ;
+
+# Skipping MacroDefinition: XKDEFI ( ... )
 
 const CBLAS_INDEX = size_t
 

@@ -11,13 +11,9 @@ using Krylov
 using LinearAlgebra # norm
 using SparseArrays  # spdiagm
 
-# TODO: should use `LBT_DEFAULT_LIBS` instead, but its not working.
-# using explicit `lbt_forward` here works though
-BLAS.lbt_forward("$(ENV["XKRT_HOME"])/lib/libxkblas_cblas.so")
-
-# Print blas config
-println(BLAS.vendor())
-println(BLAS.get_config())
+# using krylov overload
+include("../src/krylov-synchronous.jl")
+XKBlas.init()
 
 # Symmetric and positive definite systems.
 function symmetric_definite(n :: Int=10; FC=Float64)
@@ -38,3 +34,6 @@ for FC in (Float64, ComplexF64)
     println("Success")
     println(resid)
 end
+
+
+XKBlas.deinit()

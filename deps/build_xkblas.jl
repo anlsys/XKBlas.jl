@@ -13,7 +13,7 @@ XKBlas_pkg = Base.UUID("8d3f9e88-0651-4e8b-8f79-7d9d5f5f9e88")
 
 # Configuration from install.sh
 const XKAAPI_BRANCH = "master"
-const XKBLAS_BRANCH = "v2.0"
+const XKBLAS_BRANCH = "v2.0-sync-versions"
 const XKAAPI_URL = "https://gitlab.inria.fr/xkaapi/dev-v2.git"
 const XKBLAS_URL = "https://gitlab.inria.fr/xkblas/dev.git"
 
@@ -174,8 +174,10 @@ xkaapi_cmake_options = String[
     "-DCMAKE_C_COMPILER=$clang_path",
     "-DCMAKE_CXX_COMPILER=$clangxx_path",
     "-DCMAKE_LINKER=$lld_path",
-    "-DCMAKE_BUILD_TYPE=Release",
+    "-DCMAKE_BUILD_TYPE=Debug",
     "-DCMAKE_INSTALL_PREFIX=$xkaapi_install_dir",
+    "-DSTRICT=OFF",
+    "-DUSE_STATS=ON",
     "-DUSE_CUDA=$(use_cuda ? "on" : "off")",
     "-GNinja",
 ]

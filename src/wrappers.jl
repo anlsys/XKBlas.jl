@@ -48,6 +48,8 @@ axpy_async(n, alpha::ComplexF32, x, y)  = caxpy_async(n, alpha, x, y)
 axpy_async(n, alpha::ComplexF64, x, y)  = zaxpy_async(n, alpha, x, y)
 
 # TODO: complex version not supported yet, but they will need to change the dispatcher
+dot(n, x, incx, y, incy, result::Ref{Float32}) = sdot(n, x, incx, y, incy, result)
+dot(n, x, incx, y, incy, result::Ref{Float64}) = ddot(n, x, incx, y, incy, result)
 dot_async(n, x, incx, y, incy, result::Ref{Float32}) = sdot_async(n, x, incx, y, incy, result)
 dot_async(n, x, incx, y, incy, result::Ref{Float64}) = ddot_async(n, x, incx, y, incy, result)
 

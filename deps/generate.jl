@@ -2,10 +2,10 @@ using Clang.Generators
 using Clang.LibClang.Clang_jll
 using Scratch
 
-XKBlas_pkg = Base.UUID("8d3f9e88-0651-4e8b-8f79-7d9d5f5f9e88")
-
-xkblas_dir = get_scratch!(XKBlas_pkg, "xkblas")
-xkblas_include_dir = joinpath(xkblas_dir, "include")
+# XKBlas_pkg = Base.UUID("8d3f9e88-0651-4e8b-8f79-7d9d5f5f9e88")
+# xkblas_dir = get_scratch!(XKBlas_pkg, "xkblas")
+# xkblas_include_dir = joinpath(xkblas_dir, "include")
+xkblas_include_dir = "/home/rpereira/install/xkrt/debug-a100/include/"
 
 println("Using XKBlas headers in $xkblas_include_dir")
 
