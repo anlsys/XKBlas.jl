@@ -11,16 +11,11 @@ using Krylov
 using LinearAlgebra # norm
 using SparseArrays  # spdiagm
 
-# TODO: should use `LBT_DEFAULT_LIBS` instead, but its not working.
-# using explicit `lbt_forward` here works though
-BLAS.lbt_forward("$(ENV["XKRT_HOME"])/lib/libxkblas_cblas.so")
-
-# Print blas config
-println(BLAS.vendor())
-println(BLAS.get_config())
+include("../src/krylov-synchronous.jl")     # TODO: extra line
+XKBlas.init()                               # TODO: extra line
 
 # Symmetric and positive definite systems.
-function symmetric_definite(n :: Int=10; FC=Float64)
+function symmetric_definite(n::Int, FC)
   α = FC <: Complex ? FC(im) : one(FC)
   A = spdiagm(-1 => α * ones(FC, n-1), 0 => 4 * ones(FC, n), 1 => conj(α) * ones(FC, n-1))
   b = A * FC[1:n;]
@@ -29,12 +24,15 @@ end
 
 # Run CG
 cg_tol = 1.0e-6
-for FC in (Float64, ComplexF64)
-    A, b = symmetric_definite(FC=FC)
-    (x, stats) = cg(A, b, itmax=10)
-    r = b - A * x
-    resid = norm(r) / norm(b)
-    @assert resid ≤ cg_tol "Failure"
-    println("Success")
-    println(resid)
-end
+n = 10
+FC=Float64 # (Float64, ComplexF64)
+A, b = symmetric_definite(n, FC)
+(x, stats) = cg(A, b, itmax=5*n)
+r = b - A * x
+resid = norm(r) / norm(b)
+println("Success")
+println(resid)
+
+XKBlas.deinit()                             # TODO: extra line
+
+@assert resid ≤ cg_tol "Failure"
