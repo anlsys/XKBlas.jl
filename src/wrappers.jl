@@ -47,10 +47,15 @@ axpy_async(n, alpha::Float64,    x, y)  = daxpy_async(n, alpha, x, y)
 axpy_async(n, alpha::ComplexF32, x, y)  = caxpy_async(n, alpha, x, y)
 axpy_async(n, alpha::ComplexF64, x, y)  = zaxpy_async(n, alpha, x, y)
 
-copy_async(n, x::AbstractVector{Float32},    y::AbstractVector{Float32}   )  = scopy_async(n, x, y)
-copy_async(n, x::AbstractVector{Float64},    y::AbstractVector{Float64}   )  = dcopy_async(n, x, y)
-copy_async(n, x::AbstractVector{ComplexF32}, y::AbstractVector{ComplexF32})  = ccopy_async(n, x, y)
-copy_async(n, x::AbstractVector{ComplexF64}, y::AbstractVector{ComplexF64})  = zcopy_async(n, x, y)
+copy(n, x::AbstractVector{Float32},    incx, y::AbstractVector{Float32}   , incy)  = scopy(n, x, incx, y, incy)
+copy(n, x::AbstractVector{Float64},    incx, y::AbstractVector{Float64}   , incy)  = dcopy(n, x, incx, y, incy)
+copy(n, x::AbstractVector{ComplexF32}, incx, y::AbstractVector{ComplexF32}, incy)  = ccopy(n, x, incx, y, incy)
+copy(n, x::AbstractVector{ComplexF64}, incx, y::AbstractVector{ComplexF64}, incy)  = zcopy(n, x, incx, y, incy)
+
+copy_async(n, x::AbstractVector{Float32},   incx, y::AbstractVector{Float32}   , incy)  = scopy_async(n, x, y)
+copy_async(n, x::AbstractVector{Float64},   incx, y::AbstractVector{Float64}   , incy)  = dcopy_async(n, x, y)
+copy_async(n, x::AbstractVector{ComplexF32},incx, y::AbstractVector{ComplexF32}, incy)  = ccopy_async(n, x, y)
+copy_async(n, x::AbstractVector{ComplexF64},incx, y::AbstractVector{ComplexF64}, incy)  = zcopy_async(n, x, y)
 
 # TODO: complex version not supported yet, but they will need to change the dispatcher
 dot(n, x, incx, y, incy, result::Ref{Float32}) = sdot(n, x, incx, y, incy, result)

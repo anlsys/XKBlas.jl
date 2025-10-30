@@ -11,9 +11,8 @@ using Krylov
 using LinearAlgebra # norm
 using SparseArrays  # spdiagm
 
-# using krylov overload
-include("../src/krylov-synchronous.jl")
-XKBlas.init()
+include("../src/krylov-synchronous.jl")     # TODO: extra line
+XKBlas.init()                               # TODO: extra line
 
 # Symmetric and positive definite systems.
 function symmetric_definite(n::Int, FC)
@@ -34,6 +33,6 @@ resid = norm(r) / norm(b)
 println("Success")
 println(resid)
 
-XKBlas.deinit()
+XKBlas.deinit()                             # TODO: extra line
 
 @assert resid ≤ cg_tol "Failure"

@@ -1,4 +1,4 @@
-# build XKBlas with CMake (including XKAAPI dependency)
+# build XKBlas with CMake (including XKRT dependency)
 
 using Pkg
 Pkg.activate(@__DIR__)
@@ -12,28 +12,28 @@ using OpenBLAS_jll
 XKBlas_pkg = Base.UUID("8d3f9e88-0651-4e8b-8f79-7d9d5f5f9e88")
 
 # Configuration from install.sh
-const XKAAPI_BRANCH = "master"
-const XKBLAS_BRANCH = "v2.0-sync-versions"
-const XKAAPI_URL = "https://gitlab.inria.fr/xkaapi/dev-v2.git"
+const XKRT_BRANCH = "master"
+const XKBLAS_BRANCH = "v2.0"
+const XKRT_URL = "https://gitlab.inria.fr/xkaapi/dev-v2.git"
 const XKBLAS_URL = "https://gitlab.inria.fr/xkblas/dev.git"
 
 # get scratch directories for installations
-xkaapi_install_dir = get_scratch!(XKBlas_pkg, "xkaapi")
+xkrt_install_dir = get_scratch!(XKBlas_pkg, "xkrt")
 xkblas_install_dir = get_scratch!(XKBlas_pkg, "xkblas")
-rm(xkaapi_install_dir; recursive=true, force=true)
+rm(xkrt_install_dir; recursive=true, force=true)
 rm(xkblas_install_dir; recursive=true, force=true)
 
 # get scratch directories for source code
-xkaapi_source_dir = get_scratch!(XKBlas_pkg, "xkaapi_src")
+xkrt_source_dir = get_scratch!(XKBlas_pkg, "xkrt_src")
 xkblas_source_dir = get_scratch!(XKBlas_pkg, "xkblas_src")
 
 # get build directories
-xkaapi_build_dir = if length(ARGS) >= 1
-    joinpath(ARGS[1], "xkaapi")
+xkrt_build_dir = if length(ARGS) >= 1
+    joinpath(ARGS[1], "xkrt")
 else
-    mktempdir(prefix="xkaapi_build_")
+    mktempdir(prefix="xkrt_build_")
 end
-mkpath(xkaapi_build_dir)
+mkpath(xkrt_build_dir)
 
 xkblas_build_dir = if length(ARGS) >= 1
     joinpath(ARGS[1], "xkblas")
@@ -43,20 +43,20 @@ end
 mkpath(xkblas_build_dir)
 
 #######################
-# Clone XKAAPI source #
+# Clone XKRT source #
 #######################
 @info "="^60
-@info "Cloning/updating XKAAPI source (branch: $XKAAPI_BRANCH)..."
+@info "Cloning/updating XKRT source (branch: $XKRT_BRANCH)..."
 @info "="^60
 
 # Check if directory exists and is a valid git repository
-if isdir(xkaapi_source_dir) && isdir(joinpath(xkaapi_source_dir, ".git"))
-    @info "XKAAPI source directory exists, updating..."
+if isdir(xkrt_source_dir) && isdir(joinpath(xkrt_source_dir, ".git"))
+    @info "XKRT source directory exists, updating..."
     try
-        repo = LibGit2.GitRepo(xkaapi_source_dir)
+        repo = LibGit2.GitRepo(xkrt_source_dir)
         try
             LibGit2.fetch(repo)
-            LibGit2.checkout!(repo, XKAAPI_BRANCH)
+            LibGit2.checkout!(repo, XKRT_BRANCH)
             # Pull latest changes
             LibGit2.merge!(repo, fastforward=true)
         finally
@@ -65,26 +65,26 @@ if isdir(xkaapi_source_dir) && isdir(joinpath(xkaapi_source_dir, ".git"))
     catch e
         @warn "Failed to update existing repository: $e"
         @info "Removing and re-cloning..."
-        rm(xkaapi_source_dir; recursive=true, force=true)
-        LibGit2.clone(XKAAPI_URL, xkaapi_source_dir; branch=XKAAPI_BRANCH)
+        rm(xkrt_source_dir; recursive=true, force=true)
+        LibGit2.clone(XKRT_URL, xkrt_source_dir; branch=XKRT_BRANCH)
     end
 else
     # Remove if directory exists but is not a git repo
-    if isdir(xkaapi_source_dir)
+    if isdir(xkrt_source_dir)
         @warn "Directory exists but is not a git repository. Removing..."
-        rm(xkaapi_source_dir; recursive=true, force=true)
+        rm(xkrt_source_dir; recursive=true, force=true)
     end
-    @info "Cloning XKAAPI from $XKAAPI_URL"
-    LibGit2.clone(XKAAPI_URL, xkaapi_source_dir; branch=XKAAPI_BRANCH)
+    @info "Cloning XKRT from $XKRT_URL"
+    LibGit2.clone(XKRT_URL, xkrt_source_dir; branch=XKRT_BRANCH)
 end
 
 # Get commit hash for logging
-xkaapi_hash = let repo = LibGit2.GitRepo(xkaapi_source_dir)
+xkrt_hash = let repo = LibGit2.GitRepo(xkrt_source_dir)
     hash = string(LibGit2.head_oid(repo))[1:12]
     close(repo)
     hash
 end
-@info "Using XKAAPI commit: $xkaapi_hash"
+@info "Using XKRT commit: $xkrt_hash"
 
 #######################
 # Clone XKBlas source #
@@ -160,22 +160,22 @@ else
 end
 
 #######################
-# Build XKAAPI (xkrt) #
+# Build XKRT (xkrt) #
 #######################
 @info "="^60
-@info "Building XKAAPI (xkrt) dependency..."
+@info "Building XKRT (xkrt) dependency..."
 @info "="^60
 
 # Use lld linker from LLVM_full_jll instead of system linker
 lld_path = joinpath(dirname(clang_path), "ld.lld")
 @info "Using lld linker from LLVM_full_jll: $lld_path"
 
-xkaapi_cmake_options = String[
+xkrt_cmake_options = String[
     "-DCMAKE_C_COMPILER=$clang_path",
     "-DCMAKE_CXX_COMPILER=$clangxx_path",
     "-DCMAKE_LINKER=$lld_path",
     "-DCMAKE_BUILD_TYPE=Debug",
-    "-DCMAKE_INSTALL_PREFIX=$xkaapi_install_dir",
+    "-DCMAKE_INSTALL_PREFIX=$xkrt_install_dir",
     "-DSTRICT=OFF",
     "-DUSE_STATS=ON",
     "-DUSE_CUDA=$(use_cuda ? "on" : "off")",
@@ -184,33 +184,33 @@ xkaapi_cmake_options = String[
 
 if use_cuda && !isempty(cmake_prefix_path)
     # Help CMake find CUDA from CUDA_SDK_jll
-    push!(xkaapi_cmake_options, "-DCMAKE_PREFIX_PATH=$cmake_prefix_path")
-    push!(xkaapi_cmake_options, "-DCUDAToolkit_ROOT=$cmake_prefix_path")
+    push!(xkrt_cmake_options, "-DCMAKE_PREFIX_PATH=$cmake_prefix_path")
+    push!(xkrt_cmake_options, "-DCUDAToolkit_ROOT=$cmake_prefix_path")
 elseif !isempty(cmake_prefix_path)
-    push!(xkaapi_cmake_options, "-DCMAKE_PREFIX_PATH=$cmake_prefix_path")
+    push!(xkrt_cmake_options, "-DCMAKE_PREFIX_PATH=$cmake_prefix_path")
 end
 
 cmake() do cmake_path
     ninja() do ninja_path
-        # Configure XKAAPI
-        cmd = `$cmake_path $xkaapi_cmake_options -S $xkaapi_source_dir -B $xkaapi_build_dir`
-        @info "Configuring XKAAPI..." cmd
+        # Configure XKRT
+        cmd = `$cmake_path $xkrt_cmake_options -S $xkrt_source_dir -B $xkrt_build_dir`
+        @info "Configuring XKRT..." cmd
         run(cmd)
 
-        # Build and install XKAAPI
-        cmd = `$cmake_path --build $xkaapi_build_dir --target install`
-        @info "Building and installing XKAAPI..." cmd
+        # Build and install XKRT
+        cmd = `$cmake_path --build $xkrt_build_dir --target install`
+        @info "Building and installing XKRT..." cmd
         run(cmd)
     end
 end
 
-# Verify XKAAPI installation
-xkaapi_lib = joinpath(xkaapi_install_dir, "lib", "libxkrt.so")
-if !ispath(xkaapi_lib)
-    xkaapi_lib = joinpath(xkaapi_install_dir, "lib64", "libxkrt.so")
+# Verify XKRT installation
+xkrt_lib = joinpath(xkrt_install_dir, "lib", "libxkrt.so")
+if !ispath(xkrt_lib)
+    xkrt_lib = joinpath(xkrt_install_dir, "lib64", "libxkrt.so")
 end
-@assert ispath(xkaapi_lib) "Could not find libxkrt.so at $xkaapi_lib"
-@info "XKAAPI installed successfully at: $xkaapi_install_dir"
+@assert ispath(xkrt_lib) "Could not find libxkrt.so at $xkrt_lib"
+@info "XKRT installed successfully at: $xkrt_install_dir"
 
 ##################
 # Build XKBlas   #
@@ -219,11 +219,11 @@ end
 @info "Building XKBlas..."
 @info "="^60
 
-# Update CMAKE_PREFIX_PATH to include XKAAPI
+# Update CMAKE_PREFIX_PATH to include XKRT
 if !isempty(cmake_prefix_path)
-    cmake_prefix_path = "$cmake_prefix_path:$xkaapi_install_dir"
+    cmake_prefix_path = "$cmake_prefix_path:$xkrt_install_dir"
 else
-    cmake_prefix_path = xkaapi_install_dir
+    cmake_prefix_path = xkrt_install_dir
 end
 
 # Get OpenBLAS paths from OpenBLAS_jll
@@ -244,7 +244,7 @@ xkblas_cmake_options = String[
     "-DCMAKE_BUILD_TYPE=Release",
     "-DCMAKE_INSTALL_PREFIX=$xkblas_install_dir",
     "-DCMAKE_PREFIX_PATH=$cmake_prefix_path",
-    "-DXKRT_DIR=$(joinpath(xkaapi_install_dir, "lib", "cmake", "XKRT"))",
+    "-DXKRT_DIR=$(joinpath(xkrt_install_dir, "lib", "cmake", "XKRT"))",
     "-DSTRICT=OFF",
     "-DUSE_CUDA=$(use_cuda ? "on" : "off")",
     "-DUSE_CUBLAS=$(use_cuda ? "on" : "off")",
@@ -284,9 +284,9 @@ if !ispath(xkblas_lib_path)
 end
 @assert ispath(xkblas_lib_path) "Could not find libxkblas.so at $xkblas_lib_path"
 
-xkrt_lib_path = joinpath(xkaapi_install_dir, "lib", "libxkrt.so")
+xkrt_lib_path = joinpath(xkrt_install_dir, "lib", "libxkrt.so")
 if !ispath(xkrt_lib_path)
-    xkrt_lib_path = joinpath(xkaapi_install_dir, "lib64", "libxkrt.so")
+    xkrt_lib_path = joinpath(xkrt_install_dir, "lib64", "libxkrt.so")
 end
 @assert ispath(xkrt_lib_path) "Could not find libxkrt.so at $xkrt_lib_path"
 

@@ -1,6 +1,6 @@
 # Building XKBlas Locally
 
-This directory contains scripts to build XKBlas and its dependency XKAAPI (xkrt) from source.
+This directory contains scripts to build XKBlas and its dependency XKRT (xkrt) from source.
 
 ## TLDR;
 - Run `julia --project=. -e 'using Pkg; Pkg.instantiate(); include("build_local.jl")'`
@@ -8,9 +8,9 @@ This directory contains scripts to build XKBlas and its dependency XKAAPI (xkrt)
 ## Overview
 
 The `build_xkblas.jl` script will:
-1. Clone/update XKAAPI from GitLab (branch: `master`)
+1. Clone/update XKRT from GitLab (branch: `master`)
 2. Clone/update XKBlas from GitLab (branch: `v2.0`)
-3. Build and install XKAAPI to a scratch directory
+3. Build and install XKRT to a scratch directory
 4. Build and install XKBlas to a scratch directory
 5. Configure `LocalPreferences.toml` to use the locally built libraries
 
@@ -71,7 +71,7 @@ No manual CUDA installation or environment variables are required!
 ### Branch Selection
 
 The branches are configured at the top of `build_xkblas.jl`:
-- `XKAAPI_BRANCH`: Currently set to `"master"`
+- `XKRT_BRANCH`: Currently set to `"master"`
 - `XKBLAS_BRANCH`: Currently set to `"v2.0"`
 
 You can modify these constants in the script if you need different branches.
@@ -89,15 +89,15 @@ The script enables the following CMake options for XKBlas:
 ## Scratch Directories
 
 The script uses Julia's `Scratch.jl` to manage installation directories:
-- Source code: `~/.julia/scratchspaces/<uuid>/xkaapi_src` and `xkblas_src`
-- Installation: `~/.julia/scratchspaces/<uuid>/xkaapi` and `xkblas`
+- Source code: `~/.julia/scratchspaces/<uuid>/xkrt_src` and `xkblas_src`
+- Installation: `~/.julia/scratchspaces/<uuid>/xkrt` and `xkblas`
 
 To clean up and rebuild:
 ```julia
 using Scratch
-delete_scratch!("8d3f9e88-0651-4e8b-8f79-7d9d5f5f9e88", "xkaapi")
+delete_scratch!("8d3f9e88-0651-4e8b-8f79-7d9d5f5f9e88", "xkrt")
 delete_scratch!("8d3f9e88-0651-4e8b-8f79-7d9d5f5f9e88", "xkblas")
-delete_scratch!("8d3f9e88-0651-4e8b-8f79-7d9d5f5f9e88", "xkaapi_src")
+delete_scratch!("8d3f9e88-0651-4e8b-8f79-7d9d5f5f9e88", "xkrt_src")
 delete_scratch!("8d3f9e88-0651-4e8b-8f79-7d9d5f5f9e88", "xkblas_src")
 ```
 
@@ -122,5 +122,5 @@ If cloning from GitLab fails, you may need to set up SSH keys or use HTTPS authe
 ## See Also
 
 - [XKBlas Repository](https://gitlab.inria.fr/xkblas/dev)
-- [XKAAPI Repository](https://gitlab.inria.fr/xkaapi/dev-v2)
+- [XKRT Repository](https://gitlab.inria.fr/xkaapi/dev-v2)
 - Original install script: `../../XKBlas/scripts/install.sh`
