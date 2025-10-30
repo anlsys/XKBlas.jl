@@ -70,19 +70,31 @@ copy_async(n, x::AbstractVector{ComplexF64},incx, y::AbstractVector{ComplexF64},
 # TODO: complex version not supported yet, but they will need to change the dispatcher
 dot(n, x, incx, y, incy, result::Ref{Float32}) = sdot(n, x, incx, y, incy, result)
 dot(n, x, incx, y, incy, result::Ref{Float64}) = ddot(n, x, incx, y, incy, result)
+
 dot_async(n, x, incx, y, incy, result::Ref{Float32}) = sdot_async(n, x, incx, y, incy, result)
 dot_async(n, x, incx, y, incy, result::Ref{Float64}) = ddot_async(n, x, incx, y, incy, result)
 
 # TODO: complex version not supported yet, but they will need to change the dispatcher
-scal_async(n, alpha::Float32, x, incx) = sscal_async(n, alpha, x, incx)
-scal_async(n, alpha::Float64, x, incx) = dscal_async(n, alpha, x, incx)
+scal(n, alpha::Float32, x, incx) = sscal_async(n, Ref(alpha), x, incx)
+scal(n, alpha::Float64, x, incx) = dscal_async(n, Ref(alpha), x, incx)
+
+scal_async(n, alpha::Float32, x, incx) = sscal_async(n, Ref(alpha), x, incx)
+scal_async(n, alpha::Float64, x, incx) = dscal_async(n, Ref(alpha), x, incx)
 
 ### Level 2 ###
 
-gemv_async(transA, m, n, alpha::Float32, A, lda, x, incx, beta, y, incy) = sgemv_async(transA, m, n, Ref(alpha), A, lda, x, incx, beta, y, incy)
-gemv_async(transA, m, n, alpha::Float64, A, lda, x, incx, beta, y, incy) = dgemv_async(transA, m, n, Ref(alpha), A, lda, x, incx, beta, y, incy)
+gemv(transA, m, n, alpha::Float32, A, lda, x, incx, beta, y, incy) = sgemv(transA, m, n, Ref(alpha), A, lda, x, incx, Ref(beta), y, incy)
+gemv(transA, m, n, alpha::Float64, A, lda, x, incx, beta, y, incy) = dgemv(transA, m, n, Ref(alpha), A, lda, x, incx, Ref(beta), y, incy)
+
+gemv_async(transA, m, n, alpha::Float32, A, lda, x, incx, beta, y, incy) = sgemv_async(transA, m, n, Ref(alpha), A, lda, x, incx, Ref(beta), y, incy)
+gemv_async(transA, m, n, alpha::Float64, A, lda, x, incx, beta, y, incy) = dgemv_async(transA, m, n, Ref(alpha), A, lda, x, incx, Ref(beta), y, incy)
 
 ### Level 3 ###
+
+gemm(transA, transB, m, n, k, alpha::Float32,    A, lda, B, ldb, beta::Float32,    C, ldc)  = sgemm(transA, transB, m, n, k, Ref(alpha), A, lda, B, ldb, Ref(beta), C, ldc)
+gemm(transA, transB, m, n, k, alpha::Float64,    A, lda, B, ldb, beta::Float64,    C, ldc)  = dgemm(transA, transB, m, n, k, Ref(alpha), A, lda, B, ldb, Ref(beta), C, ldc)
+gemm(transA, transB, m, n, k, alpha::ComplexF32, A, lda, B, ldb, beta::ComplexF32, C, ldc)  = cgemm(transA, transB, m, n, k, Ref(alpha), A, lda, B, ldb, Ref(beta), C, ldc)
+gemm(transA, transB, m, n, k, alpha::ComplexF64, A, lda, B, ldb, beta::ComplexF64, C, ldc)  = zgemm(transA, transB, m, n, k, Ref(alpha), A, lda, B, ldb, Ref(beta), C, ldc)
 
 gemm_async(transA, transB, m, n, k, alpha::Float32,    A, lda, B, ldb, beta::Float32,    C, ldc)  = sgemm_async(transA, transB, m, n, k, Ref(alpha), A, lda, B, ldb, Ref(beta), C, ldc)
 gemm_async(transA, transB, m, n, k, alpha::Float64,    A, lda, B, ldb, beta::Float64,    C, ldc)  = dgemm_async(transA, transB, m, n, k, Ref(alpha), A, lda, B, ldb, Ref(beta), C, ldc)
