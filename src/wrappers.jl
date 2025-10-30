@@ -37,15 +37,25 @@ memory_coherent_async(A, lda, m, n) = memory_matrix_coherent_async(A, lda, m, n,
 
 ### Level 1 ###
 
-axpby_async(n, alpha::Float32,    x, beta, y) = saxpby_async(n, alpha, x, b, y)
-axpby_async(n, alpha::Float64,    x, beta, y) = daxpby_async(n, alpha, x, b, y)
-axpby_async(n, alpha::ComplexF32, x, beta, y) = caxpby_async(n, alpha, x, b, y)
-axpby_async(n, alpha::ComplexF64, x, beta, y) = zaxpby_async(n, alpha, x, b, y)
+axpy(n, alpha::Float32,    x, incx, y, incy)  = saxpy(n, Ref(alpha), x, incx, y, incy)
+axpy(n, alpha::Float64,    x, incx, y, incy)  = daxpy(n, Ref(alpha), x, incx, y, incy)
+axpy(n, alpha::ComplexF32, x, incx, y, incy)  = caxpy(n, Ref(alpha), x, incx, y, incy)
+axpy(n, alpha::ComplexF64, x, incx, y, incy)  = zaxpy(n, Ref(alpha), x, incx, y, incy)
 
-axpy_async(n, alpha::Float32,    x, y)  = saxpy_async(n, alpha, x, y)
-axpy_async(n, alpha::Float64,    x, y)  = daxpy_async(n, alpha, x, y)
-axpy_async(n, alpha::ComplexF32, x, y)  = caxpy_async(n, alpha, x, y)
-axpy_async(n, alpha::ComplexF64, x, y)  = zaxpy_async(n, alpha, x, y)
+axpy_async(n, alpha::Float32,    x, incx, y, incy)  = saxpy_async(n, Ref(alpha), x, incx, y, incy)
+axpy_async(n, alpha::Float64,    x, incx, y, incy)  = daxpy_async(n, Ref(alpha), x, incx, y, incy)
+axpy_async(n, alpha::ComplexF32, x, incx, y, incy)  = caxpy_async(n, Ref(alpha), x, incx, y, incy)
+axpy_async(n, alpha::ComplexF64, x, incx, y, incy)  = zaxpy_async(n, Ref(alpha), x, incx, y, incy)
+
+axpby(n, alpha::Float32,    x, incx, beta, y, incy) = saxpby(n, Ref(alpha), x, incx, Ref(beta), y, incy)
+axpby(n, alpha::Float64,    x, incx, beta, y, incy) = daxpby(n, Ref(alpha), x, incx, Ref(beta), y, incy)
+axpby(n, alpha::ComplexF32, x, incx, beta, y, incy) = caxpby(n, Ref(alpha), x, incx, Ref(beta), y, incy)
+axpby(n, alpha::ComplexF64, x, incx, beta, y, incy) = zaxpby(n, Ref(alpha), x, incx, Ref(beta), y, incy)
+
+axpby_async(n, alpha::Float32,    x, incx, beta, y, incy) = saxpby_async(n, Ref(alpha), x, incx, Ref(beta), y, incy)
+axpby_async(n, alpha::Float64,    x, incx, beta, y, incy) = daxpby_async(n, Ref(alpha), x, incx, Ref(beta), y, incy)
+axpby_async(n, alpha::ComplexF32, x, incx, beta, y, incy) = caxpby_async(n, Ref(alpha), x, incx, Ref(beta), y, incy)
+axpby_async(n, alpha::ComplexF64, x, incx, beta, y, incy) = zaxpby_async(n, Ref(alpha), x, incx, Ref(beta), y, incy)
 
 copy(n, x::AbstractVector{Float32},    incx, y::AbstractVector{Float32}   , incy)  = scopy(n, x, incx, y, incy)
 copy(n, x::AbstractVector{Float64},    incx, y::AbstractVector{Float64}   , incy)  = dcopy(n, x, incx, y, incy)
