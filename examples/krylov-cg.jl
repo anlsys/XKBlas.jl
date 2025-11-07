@@ -12,7 +12,6 @@ using LinearAlgebra # norm
 using SparseArrays  # spdiagm
 
 include("../src/krylov-synchronous.jl")     # TODO: extra line
-XKBlas.init()                               # TODO: extra line
 
 # Symmetric and positive definite systems.
 function symmetric_definite(n::Int, FC)
@@ -24,15 +23,16 @@ end
 
 # Run CG
 cg_tol = 1.0e-6
-n = 10
+n = 1024
 FC=Float64 # (Float64, ComplexF64)
 A, b = symmetric_definite(n, FC)
-(x, stats) = cg(A, b, itmax=5*n)
+
+@time begin
+    (x, stats) = cg(A, b, itmax=5*n)
+end
 r = b - A * x
 resid = norm(r) / norm(b)
 println("Success")
 println(resid)
-
-XKBlas.deinit()                             # TODO: extra line
 
 @assert resid ≤ cg_tol "Failure"

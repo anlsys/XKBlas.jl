@@ -4,7 +4,7 @@ using Pkg
 Pkg.activate(@__DIR__)
 Pkg.instantiate()
 
-using Scratch, Preferences, CMake_jll, Ninja_jll, LibGit2, LLVM_full_jll
+using Scratch, Preferences, CMake_jll, LibGit2, LLVM_full_jll
 using CUDA
 # using CUDA_SDK_jll    # TODO: enable me when CUDA_SDK_jll is fixed
 using OpenBLAS_jll
@@ -12,8 +12,8 @@ using OpenBLAS_jll
 XKBlas_pkg = Base.UUID("8d3f9e88-0651-4e8b-8f79-7d9d5f5f9e88")
 
 # Configuration from install.sh
-const XKRT_BRANCH = "master"
-const XKBLAS_BRANCH = "v2.0"
+const XKRT_BRANCH = "graph"
+const XKBLAS_BRANCH = "graph"
 const XKRT_URL = "https://gitlab.inria.fr/xkaapi/dev-v2.git"
 const XKBLAS_URL = "https://gitlab.inria.fr/xkblas/dev.git"
 
@@ -178,8 +178,7 @@ xkrt_cmake_options = String[
     "-DCMAKE_INSTALL_PREFIX=$xkrt_install_dir",
     "-DSTRICT=OFF",
     "-DUSE_STATS=ON",
-    "-DUSE_CUDA=$(use_cuda ? "on" : "off")",
-    "-GNinja",
+    "-DUSE_CUDA=$(use_cuda ? "on" : "off")"
 ]
 
 if use_cuda && !isempty(cmake_prefix_path)
@@ -190,18 +189,19 @@ elseif !isempty(cmake_prefix_path)
     push!(xkrt_cmake_options, "-DCMAKE_PREFIX_PATH=$cmake_prefix_path")
 end
 
+# build and install XKBlas
 cmake() do cmake_path
-    ninja() do ninja_path
-        # Configure XKRT
-        cmd = `$cmake_path $xkrt_cmake_options -S $xkrt_source_dir -B $xkrt_build_dir`
-        @info "Configuring XKRT..." cmd
-        run(cmd)
+    make = "make"  # path to `make`, or find it via `which("make")`
 
-        # Build and install XKRT
-        cmd = `$cmake_path --build $xkrt_build_dir --target install`
-        @info "Building and installing XKRT..." cmd
-        run(cmd)
-    end
+    # Configure
+    cmd = `$cmake_path -G "Unix Makefiles" $xkrt_cmake_options -S $xkrt_source_dir -B $xkrt_build_dir`
+    @info "Configuring XKBlas with Unix Makefiles..." cmd
+    run(cmd)
+
+    # Build and install
+    cmd = `$make -j -C $xkrt_build_dir install`
+    @info "Building and installing XKBlas..." cmd
+    run(cmd)
 end
 
 # Verify XKRT installation
@@ -251,8 +251,7 @@ xkblas_cmake_options = String[
     "-DUSE_CUSPARSE=$(use_cuda ? "on" : "off")",
     "-DUSE_CBLAS=off",    # OpenBLAS_jll doesn't include lapacke.h needed for tests
     "-DUSE_TESTS=off",    # Disable tests - they require LAPACK headers
-    "-DUSE_OPENBLAS=off",
-    "-GNinja",
+    "-DUSE_OPENBLAS=off"
 ]
 
 # Add CUDAToolkit_ROOT hint if using CUDA
@@ -262,17 +261,17 @@ end
 
 # build and install XKBlas
 cmake() do cmake_path
-    ninja() do ninja_path
-        # Configure
-        cmd = `$cmake_path $xkblas_cmake_options -S $xkblas_source_dir -B $xkblas_build_dir`
-        @info "Configuring XKBlas..." cmd
-        run(cmd)
+    make = "make"  # path to `make`, or find it via `which("make")`
 
-        # Build and install
-        cmd = `$cmake_path --build $xkblas_build_dir --target install`
-        @info "Building and installing XKBlas..." cmd
-        run(cmd)
-    end
+    # Configure
+    cmd = `$cmake_path -G "Unix Makefiles" $xkblas_cmake_options -S $xkblas_source_dir -B $xkblas_build_dir`
+    @info "Configuring XKBlas with Unix Makefiles..." cmd
+    run(cmd)
+
+    # Build and install
+    cmd = `$make -j -C $xkblas_build_dir install`
+    @info "Building and installing XKBlas..." cmd
+    run(cmd)
 end
 
 # Find the installed libraries

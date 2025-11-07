@@ -74,6 +74,16 @@ dot(n, x, incx, y, incy, result::Ref{Float64}) = ddot(n, x, incx, y, incy, resul
 dot_async(n, x, incx, y, incy, result::Ref{Float32}) = sdot_async(n, x, incx, y, incy, result)
 dot_async(n, x, incx, y, incy, result::Ref{Float64}) = ddot_async(n, x, incx, y, incy, result)
 
+fill(n, x, value::Float32   ) = sfill(n, x, value)
+fill(n, x, value::Float64   ) = dfill(n, x, value)
+fill(n, x, value::ComplexF32) = cfill(n, x, value)
+fill(n, x, value::ComplexF64) = zfill(n, x, value)
+
+fill_async(n, x, alpha::Float32   ) = sfill_async(n, x, value)
+fill_async(n, x, alpha::Float64   ) = dfill_async(n, x, value)
+fill_async(n, x, alpha::ComplexF32) = cfill_async(n, x, value)
+fill_async(n, x, alpha::ComplexF64) = zfill_async(n, x, value)
+
 # TODO: complex version not supported yet, but they will need to change the dispatcher
 scal(n, alpha::Float32, x, incx) = sscal_async(n, Ref(alpha), x, incx)
 scal(n, alpha::Float64, x, incx) = dscal_async(n, Ref(alpha), x, incx)
