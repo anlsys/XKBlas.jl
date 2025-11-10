@@ -24,8 +24,8 @@ function random_csr_arrays(m::Int, n::Int; density::Float64=0.2, rng=Random.defa
 end
 
 # Example usage
-m = 16384
-n = 16384
+m = 16 # 16384
+n = m
 density=0.1
 rows, cols, values, A = random_csr_arrays(m, n, density=density)
 nnz = length(values)
@@ -37,11 +37,12 @@ Y = 0.0 * rand(m)
 alpha = [1.0]
 beta  = [0.0]
 transA = XKBlas.CblasNoTrans
+format = XKBlas.CblasSparseCSR
 
 XKBlas.init()
 
 @time begin
-    XKBlas.dspmv_async(alpha, transA, index_base, index_type, m, n, nnz, rows, cols, values, X, beta, Y)
+    XKBlas.dspmv_async(alpha, transA, index_base, index_type, m, n, nnz, format, rows, cols, values, X, beta, Y)
     XKBlas.memory_segment_coherent_async(Y, m * sizeof(Y[1]))
     XKBlas.sync()
 end

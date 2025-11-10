@@ -21,38 +21,37 @@ end
 
 # Run CG
 cg_tol = 1.0e-6
-n = 2048
+n = 128
 FC=Float64 # (Float64, ComplexF64)
 
-# TODO: extra line with XKBlas.jl
+# # TODO: extra line with XKBlas.jl
 include("../src/krylov-synchronous.jl")
-#include("../src/krylov-synchronous-lazy.jl")
 
 for i in 1:5
-    # XKBlas.memory_invalidate_caches()
+    XKBlas.memory_invalidate_caches()
     A, b = symmetric_definite(n, FC)
     @time begin
         (x, stats) = cg(A, b, itmax=5*n)
     end
     r = b - A * x
     resid = norm(r) / norm(b)
-    # println("Success")
-    # println(resid)
     @assert resid ≤ cg_tol "Failure"
+    println("Success")
 end
 
 # TODO: extra line with CUDA.jl
 # using CUDA
 # 
 # # run once so julia compiles
-# A, b = symmetric_definite(n, FC)
-# A_gpu = CuMatrix(A)
-# b_gpu = CuVector(b)
-# (x, stats) = cg(A_gpu, b_gpu, itmax=5*n)
-# 
-# A, b = symmetric_definite(n, FC)
-# A_gpu = CuMatrix(A)
-# b_gpu = CuVector(b)
-# @time begin
-#     (x, stats) = cg(A_gpu, b_gpu, itmax=5*n)
+# for i in 1:5
+#     A, b = symmetric_definite(n, FC)
+#     @time begin
+#         A_gpu = CuMatrix(A)
+#         b_gpu = CuVector(b)
+#         (x, stats) = cg(A_gpu, b_gpu, itmax=5*n)
+#     end
+#     r = b_gpu - A_gpu * x
+#     resid = norm(r) / norm(b)
+#     @assert resid ≤ cg_tol "Failure"
+#     println("Success")
 # end
