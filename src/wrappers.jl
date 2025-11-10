@@ -2,25 +2,82 @@
 # HOST ASYNC TASKS #
 ####################
 
-function host_async_func(body::Function; set_accesses::Union{Function,Nothing}=nothing)
-    fptr = @cfunction((args) -> body(), Cvoid, (Ptr{Cvoid},))
-    if set_accesses != nothing
-        accesses = xkrt_access_t[]
+# global table to keep Refs alive
+const _host_async_refs = IdDict{Ptr{Cvoid}, Any}()
+
+function _host_async_trampoline(fptr::Ptr{Cvoid})
+    args = unsafe_pointer_to_objref(fptr)
+    args[]()
+    delete!(_host_async_refs, fptr)
+    return
+end
+
+function host_async(body::Function; set_accesses::Union{Function,Nothing}=nothing)
+
+    fptr = @cfunction(_host_async_trampoline, Cvoid, (Ptr{Cvoid},))
+    args = Ref(body)
+    _host_async_refs[fptr] = args  # preserve Ref until trampoline executed
+
+    accesses = xkrt_access_t[]
+    if set_accesses !== nothing
         set_accesses(accesses)
-        XKBlas.host_with_accesses_async(fptr, C_NULL, pointer(accesses), Cint(length(accesses)))
+    end
+
+    local len = length(accesses)
+    if len == 0
+        XKBlas.host_async(fptr, args)
     else
-        XKBlas.host_async(fptr, C_NULL)
+        XKBlas.host_with_accesses_async(fptr, args, pointer(accesses), Cint(len))
     end
 end
 
-macro host_async(block)
-    return Expr(:block,
-        :(local set_accesses = nothing),
-        :(local body = ()->nothing),
-        esc(block),
-        :(XKBlas.host_async_func(body; set_accesses=set_accesses))
-    )
+# Helper constructor for xkrt_access_t
+function Access(
+    mode::xkrt_access_mode_t,
+    region::Union{xkrt_handle_t, xkrt_segment_t, xkrt_matrix_t};
+    scope::Union{xkrt_access_scope_t, Nothing}=nothing,
+    concurrency::Union{xkrt_access_concurrency_t, Nothing}=nothing
+)
+    access     = xkrt_access_t(ntuple(_ -> 0x00, 80))
+    access_ref = Ref(access)
+    access_ptr = Base.unsafe_convert(Ptr{xkrt_access_t}, access_ref)
+
+    # set mode
+    @assert mode != nothing
+    access_ptr.mode = mode
+
+    # set type
+    if region isa xkrt_handle_t
+        access_ptr.type = ACCESS_TYPE_HANDLE
+        access_ptr.region.handle = region
+    elseif region isa xkrt_segment_t
+        access_ptr.type = ACCESS_TYPE_SEGMENT
+        access_ptr.region.segment = region
+    elseif region isa xkrt_matrix_t
+        access_ptr.type = ACCESS_TYPE_MATRIX
+        access_ptr.region.matrix = region
+    else
+        error("Unknown region type: $(typeof(region))")
+    end
+
+    # set scope
+    if scope == nothing
+        scope = ACCESS_SCOPE_NONUNIFIED
+    end
+    access_ptr.scope = scope
+
+    # set concurrency
+    if concurrency == nothing
+        concurrency = ACCESS_CONCURRENCY_SEQUENTIAL
+    end
+    access_ptr.concurrency = concurrency
+
+    return access_ref[]
 end
+
+const Handle  = xkrt_handle_t;
+const Segment = xkrt_segment_t;
+const Matrix  = xkrt_matrix_t;
 
 ########################
 # Dispatcher for types #
@@ -222,3 +279,11 @@ trmm_async(side, uplo, transA, diag, m, n, alpha::Float32,    A, lda, B, ldb)  =
 trmm_async(side, uplo, transA, diag, m, n, alpha::Float64,    A, lda, B, ldb)  = dtrmm_async(side, uplo, transA, diag, m, n, Ref(alpha), A, lda, B, ldb)
 trmm_async(side, uplo, transA, diag, m, n, alpha::ComplexF32, A, lda, B, ldb)  = ctrmm_async(side, uplo, transA, diag, m, n, Ref(alpha), A, lda, B, ldb)
 trmm_async(side, uplo, transA, diag, m, n, alpha::ComplexF64, A, lda, B, ldb)  = ztrmm_async(side, uplo, transA, diag, m, n, Ref(alpha), A, lda, B, ldb)
+
+# Export symbols
+const PREFIXES = [""]
+for name in names(@__MODULE__; all=true), prefix in PREFIXES
+    if startswith(string(name), prefix)
+        @eval export $name
+    end
+end
