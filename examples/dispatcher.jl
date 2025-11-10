@@ -17,9 +17,6 @@ lda, ldb, ldc = m, k, m
 
 transA, transB = XKBlas.CblasNoTrans, XKBlas.CblasNoTrans
 
-# Run an XKBlas sequence
-XKBlas.init()
-
 @time begin
     XKBlas.gemm_async(
         transA, transB,
@@ -33,8 +30,6 @@ XKBlas.init()
     XKBlas.memory_coherent_async(C, ldc, m, n)
     XKBlas.sync()
 end
-
-XKBlas.deinit()
 
 # Print XKblas and Julia-native results
 if (n <= 64)

@@ -1,27 +1,25 @@
-##########################
-# INDEPENDENT HOST ASYNC #
-##########################
+####################
+# HOST ASYNC TASKS #
+####################
 
-function _host_async_trampoline(fptr::Ptr{Cvoid})
-    fref = unsafe_pointer_to_objref(fptr)
-    fref[]()
-    return
+function host_async_func(body::Function; set_accesses::Union{Function,Nothing}=nothing)
+    fptr = @cfunction((args) -> body(), Cvoid, (Ptr{Cvoid},))
+    if set_accesses != nothing
+        accesses = xkrt_access_t[]
+        set_accesses(accesses)
+        XKBlas.host_with_accesses_async(fptr, C_NULL, pointer(accesses), Cint(length(accesses)))
+    else
+        XKBlas.host_async(fptr, C_NULL)
+    end
 end
 
-function host_async(f::Function)
-    cf = @cfunction(_host_async_trampoline, Cvoid, (Ptr{Cvoid},))
-    fref = Ref(f)
-    host_async(cf, fref)
-end
-
-########################
-# DEPENDENT HOST ASYNC #
-########################
-
-function host_async(f; reads=[], writes=[])
-    println("host_async with read/write")
-    # TODO: pass to xkrt/xkblas
-    # f(reads..., writes...)
+macro host_async(block)
+    return Expr(:block,
+        :(local set_accesses = nothing),
+        :(local body = ()->nothing),
+        esc(block),
+        :(XKBlas.host_async_func(body; set_accesses=set_accesses))
+    )
 end
 
 ########################
@@ -209,8 +207,6 @@ syrk_async(uplo, trans, n, k, alpha::Float32,    A, lda, beta::Float32,    C, ld
 syrk_async(uplo, trans, n, k, alpha::Float64,    A, lda, beta::Float64,    C, ldc)  = dsyrk_async(uplo, transA, transB, n, k, Ref(alpha), A, lda, B, ldb, Ref(beta), C, ldc)
 syrk_async(uplo, trans, n, k, alpha::ComplexF32, A, lda, beta::ComplexF32, C, ldc)  = csyrk_async(uplo, transA, transB, n, k, Ref(alpha), A, lda, B, ldb, Ref(beta), C, ldc)
 syrk_async(uplo, trans, n, k, alpha::ComplexF64, A, lda, beta::ComplexF64, C, ldc)  = zsyrk_async(uplo, transA, transB, n, k, Ref(alpha), A, lda, B, ldb, Ref(beta), C, ldc)
-
-
 
 trmm(side, uplo, transA, diag, m, n, alpha::Float32,    A, lda, B, ldb)  = strmm(side, uplo, transA, diag, m, n, Ref(alpha), A, lda, B, ldb)
 trmm(side, uplo, transA, diag, m, n, alpha::Float64,    A, lda, B, ldb)  = dtrmm(side, uplo, transA, diag, m, n, Ref(alpha), A, lda, B, ldb)

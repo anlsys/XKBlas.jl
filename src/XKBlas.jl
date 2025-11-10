@@ -22,4 +22,15 @@ include("bindings.jl")
 # --- Optional high-level wrappers ---
 include("wrappers.jl")
 
+# Init xkblas - call when module is used
+function __init__()
+    XKBlas.init()
+end
+
+# Deinit XKBLAS -- call on program termination
+function cleanup()
+    XKBlas.deinit()
+end
+atexit(cleanup)
+
 end

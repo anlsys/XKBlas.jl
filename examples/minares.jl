@@ -1,7 +1,5 @@
 using XKBlas
 
-XKBlas.init()   # TODO NEW
-
 # Just a representative portion of the minares solver
 n = 4
 
@@ -64,9 +62,3 @@ end                                     # TODO NEW
 XKBlas.host_async(f, reads=[sₖ, βₖ₊₂, cₖ, γbarₖ, αₖ₊₁], writes=[ϵₖ, γbarₖ₊₁, γₖ])   # TODO NEW
 
 XKBlas.sync()   # TODO NEW
-
-####################
-# SOLVER ENDS HERE #
-####################
-
-XKBlas.deinit() # TODO NEW

@@ -39,15 +39,11 @@ beta  = [0.0]
 transA = XKBlas.CblasNoTrans
 format = XKBlas.CblasSparseCSR
 
-XKBlas.init()
-
 @time begin
     XKBlas.dspmv_async(alpha, transA, index_base, index_type, m, n, nnz, format, rows, cols, values, X, beta, Y)
     XKBlas.memory_segment_coherent_async(Y, m * sizeof(Y[1]))
     XKBlas.sync()
 end
-
-XKBlas.deinit()
 
 if (n <= 64)
     println("A =")

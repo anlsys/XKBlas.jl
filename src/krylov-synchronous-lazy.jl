@@ -1,14 +1,4 @@
-# gotta init XKBlas
 using XKBlas
-
-# Init xkblas
-XKBlas.init()
-
-# Deinit XKBLAS
-function cleanup()
-    XKBlas.deinit()
-end
-atexit(cleanup)
 
 # Overload Krylov interfaces
 using Krylov
