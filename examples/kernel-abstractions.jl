@@ -23,7 +23,12 @@ c = Vector{Float64}(undef, n)
 
 # Spawn a task that executes the kernel, and a task that reads back onto the host
 XKBlas.KA.async(vector_add_format, a, b, c)
-XKBlas.memory_coherent_async(c)
+# XKBlas.memory_coherent_async(c)
 XKBlas.sync()
 
-println("c is coherent on the host")
+# Check
+apb = a + b
+println("  a = $a")
+println("  b = $b")
+println("a+b = $apb")
+println("  c = $c")

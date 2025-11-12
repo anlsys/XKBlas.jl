@@ -14,6 +14,24 @@ end
 
 function async(
     device_global_id::xkrt_device_global_id_t,
+    fmtid::xkrt_task_format_id_t;
+    set_accesses::Union{Function,Nothing}=nothing
+)
+    accesses = xkrt_access_t[]
+    if set_accesses !== nothing
+        set_accesses(accesses)
+    end
+
+    local len = length(accesses)
+    if len == 0
+        XKBlas.async_with_format(device_global_id, fmtid)
+    else
+        XKBlas.async_with_format_with_accesses(device_global_id, fmtid, pointer(accesses), Cint(len))
+    end
+end
+
+function async(
+    device_global_id::xkrt_device_global_id_t,
     body::Function;
     set_accesses::Union{Function,Nothing}=nothing
 )
@@ -98,7 +116,7 @@ function Access(
     scope::Union{xkrt_access_scope_t, Nothing}=nothing,
     concurrency::Union{xkrt_access_concurrency_t, Nothing}=nothing
 )
-    return Access(mode, Segment(pointer(vec), pointer(vec) + length(vec)))
+    return Access(mode, Segment(pointer(vec), pointer(vec) + length(vec) * Base.elsize(vec)))
 end
 
 ########################
