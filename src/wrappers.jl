@@ -86,9 +86,20 @@ function Access(
     return access_ref[]
 end
 
+# Access Types and regions
 const Handle  = xkrt_handle_t;
 const Segment = xkrt_segment_t;
 const Matrix  = xkrt_matrix_t;
+
+# Wrappers
+function Access(
+    mode::xkrt_access_mode_t,
+    vec::AbstractVector;
+    scope::Union{xkrt_access_scope_t, Nothing}=nothing,
+    concurrency::Union{xkrt_access_concurrency_t, Nothing}=nothing
+)
+    return Access(mode, Segment(pointer(vec), pointer(vec) + length(vec)))
+end
 
 ########################
 # Dispatcher for types #

@@ -39,7 +39,7 @@ module KA
         return KernelTaskFormat(kernel_function, access_functions, fmtid)
     end
 
-    function device_async(
+    function async(
         device_global_id::XKBlas.xkrt_device_global_id_t,
         fmt::KernelTaskFormat,
         kernel_args...
@@ -53,12 +53,11 @@ module KA
             end
         end
         XKBlas.async(device_global_id, kernel_launcher_func, set_accesses=set_accesses)
-        #error("TODO - gotta spawn the device task")
     end
 
-    function device_async(fmt::KernelTaskFormat, kernel_args...)
+    function async(fmt::KernelTaskFormat, kernel_args...)
         device_global_id = XKBlas.xkrt_device_global_id_t(1)
-        return XKBlas.KA.device_async(device_global_id, fmt, kernel_args...)
+        return XKBlas.KA.async(device_global_id, fmt, kernel_args...)
     end
 
 end

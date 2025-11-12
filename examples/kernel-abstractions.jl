@@ -10,9 +10,9 @@ end
 
 const vector_add_format = XKBlas.KA.Format(
     vector_add,
-    (a) -> Access(ACCESS_MODE_R, Segment(pointer(a), pointer(a) + length(a))),
-    (b) -> Access(ACCESS_MODE_R, Segment(pointer(b), pointer(b) + length(b))),
-    (c) -> Access(ACCESS_MODE_W, Segment(pointer(c), pointer(c) + length(c)))
+    (a) -> Access(ACCESS_MODE_R, a),
+    (b) -> Access(ACCESS_MODE_R, b),
+    (c) -> Access(ACCESS_MODE_W, c)
 )
 
 # Create three vectors
@@ -22,7 +22,7 @@ b = rand(Float64, n)
 c = Vector{Float64}(undef, n)
 
 # Spawn a task that executes the kernel, and a task that reads back onto the host
-XKBlas.KA.device_async(vector_add_format, a, b, c)
+XKBlas.KA.async(vector_add_format, a, b, c)
 XKBlas.memory_coherent_async(c)
 XKBlas.sync()
 
