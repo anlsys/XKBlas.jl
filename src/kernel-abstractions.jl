@@ -2,12 +2,28 @@ module KA
 
     import ..XKBlas
 
-    function kernel_launcher_func(
-        runtime::XKBlas.xkrt_runtime_t,
-        device::Ptr{XKBlas.xkrt_device_t},
-        task::Ptr{XKBlas.xkrt_task_t}
-     )
-        XKBlas.Logger.info("Running kernel")
+    function task_kernel_launcher(
+        queue::Ptr{XKBlas.xkrt_queue_t},
+        command::Ptr{XKBlas.xkrt_command_t},
+        index::Ptr{XKBlas.xkrt_queue_command_list_counter_t}
+    )
+        XKBlas.Logger.fatal("Running kernel launcher - TODO: submit kernel and record event")
+    end
+
+    function task_ka_main(
+       runtime::Ptr{XKBlas.xkrt_runtime_t},
+       device::Ptr{XKBlas.xkrt_device_t},
+       task::Ptr{XKBlas.xkrt_task_t}
+    )
+        XKBlas.Logger.info("Running task")
+        task_kernel_launcher_fptr = @cfunction(
+            task_kernel_launcher,
+            Cvoid,
+            (Ptr{XKBlas.xkrt_queue_t},
+             Ptr{XKBlas.xkrt_command_t},
+             Ptr{XKBlas.xkrt_queue_command_list_counter_t})
+        )
+        XKBlas.xkrt_task_single_kernel_launcher(runtime, device, task, task_kernel_launcher_fptr)
     end
 
     function init()
@@ -25,9 +41,9 @@ module KA
         name = nameof(kernel_function)
         fmtid = XKBlas.task_format_put("KA.$name")
         fptr = @cfunction(
-                kernel_launcher_func,
+                task_ka_main,
                 Cvoid,
-                (XKBlas.xkrt_runtime_t,
+                (Ptr{XKBlas.xkrt_runtime_t},
                  Ptr{XKBlas.xkrt_device_t},
                  Ptr{XKBlas.xkrt_task_t})
                )
