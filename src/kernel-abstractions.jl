@@ -2,21 +2,12 @@ module KA
 
     import ..XKBlas
 
-    # the task format id
-    fmtid = 0
-
     function kernel_launcher_func()
-        println("RUN")
+        XKBlas.Logger.info("Running kernel")
     end
 
     function init()
-        fmtid = XKBlas.task_format_put("KA")
-        fptr = @cfunction(kernel_launcher_func, Cvoid, (Ptr{Cvoid},))
-        for target in instances(XKBlas.xkrt_task_format_target_t)
-            if target !== XKBlas.XKRT_TASK_FORMAT_TARGET_HOST
-                XKBlas.task_format_set(fmtid, target, fptr)
-            end
-        end
+        nothing
     end
 
     """
@@ -26,6 +17,7 @@ module KA
     struct KernelTaskFormat
         kernel_function::Function
         access_functions::Tuple{Vararg{Function}}
+        fmtid::XKBlas.xkrt_task_format_id_t
     end
 
     """
@@ -36,7 +28,15 @@ module KA
     its memory access pattern.
     """
     function Format(kernel_function::Function, access_functions::Function...)
-        return KernelTaskFormat(kernel_function, access_functions)
+        name = nameof(kernel_function)
+        fmtid = XKBlas.task_format_put("KA.$name")
+        fptr = @cfunction(kernel_launcher_func, Cvoid, (Ptr{Cvoid},))   # TODO: GC ?
+        for target in instances(XKBlas.xkrt_task_format_target_t)
+            if target !== XKBlas.XKRT_TASK_FORMAT_TARGET_HOST
+                XKBlas.task_format_set(fmtid, target, fptr)
+            end
+        end
+        return KernelTaskFormat(kernel_function, access_functions, fmtid)
     end
 
     function device_async(
@@ -47,9 +47,13 @@ module KA
         if length(fmt.access_functions) !== length(kernel_args)
             throw(ErrorException("Arguments do not match the task format accesses"))
         end
-        # TODO
-        # XKBlas.device_with_accesses_and_format_async(device_global_id, fmtid, accesses, naccesses)
-        println("TODO - gotta spawn the device task")
+        set_accesses = (accesses) -> begin
+            for i in 1:length(kernel_args)
+                push!(accesses, fmt.access_functions[i](kernel_args[i]))
+            end
+        end
+        XKBlas.async(device_global_id, kernel_launcher_func, set_accesses=set_accesses)
+        #error("TODO - gotta spawn the device task")
     end
 
     function device_async(fmt::KernelTaskFormat, kernel_args...)

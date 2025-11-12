@@ -5,15 +5,19 @@
 # global table to keep Refs alive
 const _host_async_refs = IdDict{Ptr{Cvoid}, Any}()
 
-function _host_async_trampoline(fptr::Ptr{Cvoid})
+function _async_trampoline(fptr::Ptr{Cvoid})
     args = unsafe_pointer_to_objref(fptr)
     args[]()
     delete!(_host_async_refs, fptr)
     return
 end
 
-function host_async(body::Function; set_accesses::Union{Function,Nothing}=nothing)
-    fptr = @cfunction(_host_async_trampoline, Cvoid, (Ptr{Cvoid},))
+function async(
+    device_global_id::xkrt_device_global_id_t,
+    body::Function;
+    set_accesses::Union{Function,Nothing}=nothing
+)
+    fptr = @cfunction(_async_trampoline, Cvoid, (Ptr{Cvoid},))
     args = Ref(body)
     _host_async_refs[fptr] = args  # preserve Ref until trampoline executed
 
@@ -24,14 +28,18 @@ function host_async(body::Function; set_accesses::Union{Function,Nothing}=nothin
 
     local len = length(accesses)
     if len == 0
-        XKBlas.host_async(fptr, args)
+        XKBlas.async(device_global_id, fptr, args)
     else
-        XKBlas.host_with_accesses_async(fptr, args, pointer(accesses), Cint(len))
+        XKBlas.async_with_accesses(device_global_id, fptr, args, pointer(accesses), Cint(len))
     end
 end
 
+function host_async(body::Function; set_accesses::Union{Function,Nothing}=nothing)
+    return async(HOST_DEVICE_GLOBAL_ID, body, set_accesses)
+end
+
 function host_async(set_accesses::Function, body::Function)
-    return XKBlas.host_async(body, set_accesses=set_accesses)
+    return host_async(body, set_accesses=set_accesses)
 end
 
 # Helper constructor for xkrt_access_t

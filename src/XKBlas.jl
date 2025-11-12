@@ -21,6 +21,7 @@ module XKBlas
 
     # --- High-level wrappers ---
     include("wrappers.jl")
+    include("logger.jl")
     include("kernel-abstractions.jl")
 
     # Init /Deinit xkblas - call when module is used
