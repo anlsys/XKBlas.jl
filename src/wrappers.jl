@@ -13,7 +13,6 @@ function _host_async_trampoline(fptr::Ptr{Cvoid})
 end
 
 function host_async(body::Function; set_accesses::Union{Function,Nothing}=nothing)
-
     fptr = @cfunction(_host_async_trampoline, Cvoid, (Ptr{Cvoid},))
     args = Ref(body)
     _host_async_refs[fptr] = args  # preserve Ref until trampoline executed
@@ -29,6 +28,10 @@ function host_async(body::Function; set_accesses::Union{Function,Nothing}=nothin
     else
         XKBlas.host_with_accesses_async(fptr, args, pointer(accesses), Cint(len))
     end
+end
+
+function host_async(set_accesses::Function, body::Function)
+    return XKBlas.host_async(body, set_accesses=set_accesses)
 end
 
 # Helper constructor for xkrt_access_t
@@ -85,6 +88,7 @@ const Matrix  = xkrt_matrix_t;
 
 # Memory routines
 
+memory_coherent_async(x)            = memory_segment_coherent_async(x, length(x))
 memory_coherent_async(x, n)         = memory_segment_coherent_async(x, n*sizeof(eltype(x)))
 memory_coherent_async(A, lda, m, n) = memory_matrix_coherent_async(A, lda, m, n, sizeof(eltype(A)))
 
@@ -281,9 +285,6 @@ trmm_async(side, uplo, transA, diag, m, n, alpha::ComplexF32, A, lda, B, ldb)  =
 trmm_async(side, uplo, transA, diag, m, n, alpha::ComplexF64, A, lda, B, ldb)  = ztrmm_async(side, uplo, transA, diag, m, n, Ref(alpha), A, lda, B, ldb)
 
 # Export symbols
-const PREFIXES = [""]
-for name in names(@__MODULE__; all=true), prefix in PREFIXES
-    if startswith(string(name), prefix)
-        @eval export $name
-    end
+for name in names(@__MODULE__; all=true)
+    @eval export $name
 end

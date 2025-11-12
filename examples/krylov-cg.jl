@@ -24,7 +24,7 @@ cg_tol = 1.0e-6
 n = 128
 FC=Float64 # (Float64, ComplexF64)
 
-# # TODO: extra line with XKBlas.jl
+# TODO: one extra line with XKBlas.jl to have it run on GPU
 include("../src/krylov-synchronous.jl")
 
 for i in 1:5
@@ -41,7 +41,7 @@ end
 
 # TODO: extra line with CUDA.jl
 # using CUDA
-# 
+#
 # # run once so julia compiles
 # for i in 1:5
 #     A, b = symmetric_definite(n, FC)
