@@ -2,6 +2,7 @@ module KA
 
     using CUDA  # or ROCm, oneAPI, etc.
     using CUDA.CUDAKernels
+    using KernelAbstractions
 
     import ..XKBlas
 
@@ -16,13 +17,6 @@ module KA
         fptr
     end
 
-    function get_cu_function(kernel_function::Function)
-        # kernel = @cuda launch=false kernel_function(CUDA.zeros(1), CUDA.zeros(1), CUDA.zeros(1))
-        kernel = CUDA.@cuda launch=false kernel_function()
-        cu_function::CUDA.CuFunction = kernel.fun
-        return Ptr{Cvoid}(cu_function.handle)
-    end
-
     function task_ka_main(
        runtime::Ptr{XKBlas.xkrt_runtime_t},
        device::Ptr{XKBlas.xkrt_device_t},
@@ -32,15 +26,23 @@ module KA
         fmt_ptr::Ptr{KernelTaskFormat} = XKBlas.xkrt_task_args(task)
         fmt=unsafe_load(fmt_ptr)
 
-        cufunction = get_cu_function(fmt.kernel_function)
-        XKBlas.Logger.info("cufunction is $cufunction")
         # XKBlas.xkrt_task_single_kernel_launcher(
         #     runtime,
         #     device,
         #     task,
         #     task_kernel_launcher_fptr
         # )
+        return
     end
+
+    function get_cu_function(kernel_function::Function)
+        kernel = @cuda launch=false kernel_function(CUDA.zeros(1), CUDA.zeros(1), CUDA.zeros(1))
+        # kernel = CUDA.@cuda launch=false kernel_function()
+        cu_function::CUDA.CuFunction = kernel.fun
+        return Ptr{Cvoid}(cu_function.handle)
+    end
+
+
 
     function Format(kernel_function::Function, access_functions::Function...)
         fptr = @cfunction(task_ka_main, Cvoid, (Ptr{XKBlas.xkrt_runtime_t},
@@ -51,8 +53,54 @@ module KA
         for target in instances(XKBlas.xkrt_task_format_target_t)
             XKBlas.task_format_set(fmtid, target, fptr)
         end
+
+#        ################################################
+#        # Execute the kernel once to force compilation #
+#        ################################################
+#
+#        # Create sample arrays
+#        n = 1
+#        a = CUDA.zeros(Float32, n)
+#        b = CUDA.zeros(Float32, n)
+#        c = CUDA.zeros(Float32, n)
+#
+#        # Create the KernelAbstractions kernel
+#        backend = CUDABackend()
+#        ka_kernel = kernel_function(backend)
+#
+#        # Execute
+#        ndrange = (n,)
+#        workgroupsize = (256,)
+#        ka_kernel(a, b, c, ndrange=ndrange, workgroupsize=workgroupsize)
+#        CUDA.synchronize()
+#
+#        # The kernel compiled successfully above. Now we need to extract the CUfunction
+#        # from the already-compiled kernel. Let's use @cuda to recompile with launch=false
+#        # but use StaticSize for workgroupsize to avoid dynamic calls
+#
+#        iterspace, dynamic = KernelAbstractions.partition(ka_kernel, ndrange, workgroupsize)
+#
+#        # Create StaticSize version of the iterspace for compilation
+#        static_workgroupsize = KernelAbstractions.NDIteration.StaticSize(workgroupsize)
+#        static_iterspace, static_dynamic = KernelAbstractions.partition(ka_kernel, ndrange, static_workgroupsize)
+#
+#        # Build metadata with static workgroup size
+#        metadata_type = KernelAbstractions.CompilerMetadata{
+#                                                            typeof(static_iterspace),
+#                                                            typeof(static_dynamic),
+#                                                            Nothing,
+#                                                            typeof(ndrange),
+#                                                            typeof(static_iterspace)
+#                                                           }
+#
+#        dev_array_type = CUDA.CuDeviceVector{Float32, 1}
+#        cu_function = CUDA.cufunction(ka_kernel.f, Tuple{metadata_type, dev_array_type, dev_array_type, dev_array_type})
+#        println(typeof(cu_function))
+#        XKBlas.Logger.info("cufunction is $cu_function")
+
         return KernelTaskFormat(kernel_function, access_functions, fmtid, fptr)
     end
+
 
     function device_async(
         device_global_id::XKBlas.xkrt_device_global_id_t,
