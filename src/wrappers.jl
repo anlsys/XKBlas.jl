@@ -12,10 +12,12 @@ function _async_trampoline(fptr::Ptr{Cvoid})
     return
 end
 
-function async(
+function device_async(
     device_global_id::xkrt_device_global_id_t,
     fmtid::xkrt_task_format_id_t;
-    set_accesses::Union{Function,Nothing}=nothing
+    set_accesses::Union{Function,Nothing}=nothing,
+    args=C_NULL,
+    args_size=0
 )
     accesses = xkrt_access_t[]
     if set_accesses !== nothing
@@ -24,13 +26,13 @@ function async(
 
     local len = length(accesses)
     if len == 0
-        XKBlas.async_with_format(device_global_id, fmtid)
+        XKBlas.async_with_format(device_global_id, fmtid, args, args_size)
     else
-        XKBlas.async_with_format_with_accesses(device_global_id, fmtid, pointer(accesses), Cint(len))
+        XKBlas.async_with_format_with_accesses(device_global_id, fmtid, args, args_size, pointer(accesses), Cint(len))
     end
 end
 
-function async(
+function device_async(
     device_global_id::xkrt_device_global_id_t,
     body::Function;
     set_accesses::Union{Function,Nothing}=nothing
@@ -53,11 +55,11 @@ function async(
 end
 
 function host_async(body::Function; set_accesses::Union{Function,Nothing}=nothing)
-    return async(HOST_DEVICE_GLOBAL_ID, body, set_accesses)
+    return device_async(HOST_DEVICE_GLOBAL_ID, body, set_accesses=set_accesses)
 end
 
 function host_async(set_accesses::Function, body::Function)
-    return host_async(body, set_accesses=set_accesses)
+    return device_async(HOST_DEVICE_GLOBAL_ID, body, set_accesses=set_accesses)
 end
 
 # Helper constructor for xkrt_access_t
