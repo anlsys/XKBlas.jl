@@ -178,6 +178,7 @@ xkrt_cmake_options = String[
     "-DCMAKE_INSTALL_PREFIX=$xkrt_install_dir",
     "-DSTRICT=OFF",
     "-DUSE_STATS=ON",
+    "-DUSE_JULIA=ON",
     "-DUSE_CUDA=$(use_cuda ? "on" : "off")"
 ]
 

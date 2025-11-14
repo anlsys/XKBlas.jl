@@ -7,7 +7,9 @@ const _host_async_refs = IdDict{Ptr{Cvoid}, Any}()
 
 function _async_trampoline(fptr::Ptr{Cvoid})
     args = unsafe_pointer_to_objref(fptr)
+    GC.enable(false)    # disable GC to avoid deadlocks if 'args[]()' ends-up calling the Julia runtime
     args[]()
+    GC.enable(true)
     delete!(_host_async_refs, fptr)
     return
 end
