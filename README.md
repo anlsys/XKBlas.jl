@@ -10,4 +10,4 @@ See `examples/kernel-abstractions.jl` for an example
 See `examples/krylov-cg.jl` for using with Krylov.jl
 
 # TODO
-- Fix deadlocks occuring in the Julia runtime when compiling from a foreign thread -- or find a work-around
+- Fix deadlocks occuring in the Julia runtime when compiling from a foreign thread -- or find a work-around -- see https://github.com/JuliaLang/julia/issues/59640
