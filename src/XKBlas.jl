@@ -19,12 +19,15 @@ module XKBlas
     const size_t = Csize_t
     include("bindings.jl")
 
-    # --- Optional high-level wrappers ---
+    # --- High-level wrappers ---
     include("wrappers.jl")
+    include("logger.jl")
+    include("kernel-abstractions.jl")
 
     # Init /Deinit xkblas - call when module is used
     function __init__()
         XKBlas.init()
+        XKBlas.KA.init()
         function cleanup()
             XKBlas.deinit()
         end

@@ -5,22 +5,22 @@ x = 0
 
 # first one sets 'x' to 42
 XKBlas.host_async(
+    (accesses) -> begin
+        push!(accesses, Access(ACCESS_MODE_VW, Segment(0, 64)))
+    end,
     () -> begin
         global x = 42
-    end,
-    set_accesses = (accesses) -> begin
-        push!(accesses, Access(ACCESS_MODE_VW, Segment(0, 64)))
     end
 )
 
 # second one sets 'x' to 43 - with an intersecting access to set a dependency
 XKBlas.host_async(
+    set_accesses = (accesses) -> begin
+        push!(accesses, Access(ACCESS_MODE_VR, Segment(16, 48)))
+    end,
     () -> begin
         @assert x == 42
         global x = 43
-    end,
-    set_accesses = (accesses) -> begin
-        push!(accesses, Access(ACCESS_MODE_VR, Segment(16, 48)))
     end
 )
 

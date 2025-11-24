@@ -5,16 +5,41 @@
 # global table to keep Refs alive
 const _host_async_refs = IdDict{Ptr{Cvoid}, Any}()
 
-function _host_async_trampoline(fptr::Ptr{Cvoid})
+function _async_trampoline(fptr::Ptr{Cvoid})
     args = unsafe_pointer_to_objref(fptr)
+    GC.enable(false)    # disable GC to avoid deadlocks if 'args[]()' ends-up calling the Julia runtime
     args[]()
+    GC.enable(true)
     delete!(_host_async_refs, fptr)
     return
 end
 
-function host_async(body::Function; set_accesses::Union{Function,Nothing}=nothing)
+function device_async(
+    device_global_id::xkrt_device_global_id_t,
+    fmtid::xkrt_task_format_id_t;
+    set_accesses::Union{Function,Nothing}=nothing,
+    args=C_NULL,
+    args_size=0
+)
+    accesses = xkrt_access_t[]
+    if set_accesses !== nothing
+        set_accesses(accesses)
+    end
 
-    fptr = @cfunction(_host_async_trampoline, Cvoid, (Ptr{Cvoid},))
+    local len = length(accesses)
+    if len == 0
+        XKBlas.async_with_format(device_global_id, fmtid, args, args_size)
+    else
+        XKBlas.async_with_format_with_accesses(device_global_id, fmtid, args, args_size, pointer(accesses), Cint(len))
+    end
+end
+
+function device_async(
+    device_global_id::xkrt_device_global_id_t,
+    body::Function;
+    set_accesses::Union{Function,Nothing}=nothing
+)
+    fptr = @cfunction(_async_trampoline, Cvoid, (Ptr{Cvoid},))
     args = Ref(body)
     _host_async_refs[fptr] = args  # preserve Ref until trampoline executed
 
@@ -25,10 +50,18 @@ function host_async(body::Function; set_accesses::Union{Function,Nothing}=nothin
 
     local len = length(accesses)
     if len == 0
-        XKBlas.host_async(fptr, args)
+        XKBlas.async(device_global_id, fptr, args)
     else
-        XKBlas.host_with_accesses_async(fptr, args, pointer(accesses), Cint(len))
+        XKBlas.async_with_accesses(device_global_id, fptr, args, pointer(accesses), Cint(len))
     end
+end
+
+function host_async(body::Function; set_accesses::Union{Function,Nothing}=nothing)
+    return device_async(HOST_DEVICE_GLOBAL_ID, body, set_accesses=set_accesses)
+end
+
+function host_async(set_accesses::Function, body::Function)
+    return device_async(HOST_DEVICE_GLOBAL_ID, body, set_accesses=set_accesses)
 end
 
 # Helper constructor for xkrt_access_t
@@ -75,9 +108,20 @@ function Access(
     return access_ref[]
 end
 
+# Access Types and regions
 const Handle  = xkrt_handle_t;
 const Segment = xkrt_segment_t;
 const Matrix  = xkrt_matrix_t;
+
+# Wrappers
+function Access(
+    mode::xkrt_access_mode_t,
+    vec::AbstractVector;
+    scope::Union{xkrt_access_scope_t, Nothing}=nothing,
+    concurrency::Union{xkrt_access_concurrency_t, Nothing}=nothing
+)
+    return Access(mode, Segment(pointer(vec), pointer(vec) + length(vec) * Base.elsize(vec)))
+end
 
 ########################
 # Dispatcher for types #
@@ -85,6 +129,7 @@ const Matrix  = xkrt_matrix_t;
 
 # Memory routines
 
+memory_coherent_async(x)            = memory_segment_coherent_async(x, length(x))
 memory_coherent_async(x, n)         = memory_segment_coherent_async(x, n*sizeof(eltype(x)))
 memory_coherent_async(A, lda, m, n) = memory_matrix_coherent_async(A, lda, m, n, sizeof(eltype(A)))
 
@@ -281,9 +326,6 @@ trmm_async(side, uplo, transA, diag, m, n, alpha::ComplexF32, A, lda, B, ldb)  =
 trmm_async(side, uplo, transA, diag, m, n, alpha::ComplexF64, A, lda, B, ldb)  = ztrmm_async(side, uplo, transA, diag, m, n, Ref(alpha), A, lda, B, ldb)
 
 # Export symbols
-const PREFIXES = [""]
-for name in names(@__MODULE__; all=true), prefix in PREFIXES
-    if startswith(string(name), prefix)
-        @eval export $name
-    end
+for name in names(@__MODULE__; all=true)
+    @eval export $name
 end
