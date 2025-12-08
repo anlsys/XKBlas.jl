@@ -7,9 +7,70 @@ module KA
     import ..XKBlas
     const XK = XKBlas
 
+    # Spawn Julia thread to run Julia code
+    # This design is required by Julia not allowing external threads running Julia code
+    # that leads to deadlocks in the Julia task scheduler mostly
+    module Threading
+
+        using ..KA: XK
+
+        const TASK_CHANNEL = Ref{Channel{Any}}()
+        const COND_HANDLE  = Ref{Base.AsyncCondition}()
+
+        # Tells XKRT to run that Julia routine that may enter the Julia runtime.
+        # In such case, special treatment is needed to avoid deadlocks, as Julia do not allow
+        # entering the Julia runtime from a foreign thread... That's a dirty workd-around, no better solution
+        # see https://docs.julialang.org/en/v1/manual/calling-c-and-fortran-code/#Thread-safety
+        function submit_julia_runtime_lambda(func)
+            put!(TASK_CHANNEL[], func)
+            ccall(:uv_async_send, Cint, (Ptr{Cvoid},), COND_HANDLE[].handle)
+        end
+
+        function init()
+            TASK_CHANNEL[] = Channel{Any}(Inf)
+            COND_HANDLE[]  = Base.AsyncCondition()
+
+            @async begin
+                chan = TASK_CHANNEL[]
+                cond = COND_HANDLE[]
+
+                try
+                    while isopen(cond)
+                        wait(cond)
+
+                        # Drain the queue
+                        while !isempty(chan)
+                            func = take!(chan)
+                            try
+                                Base.invokelatest(func)
+                            catch e
+                                @error "Task failed" exception=e
+                            end
+                        end
+                    end
+                catch e
+                    if !(e isa EOFError)
+                        @error "Listener crashed" exception=e
+                    end
+                end
+            end
+        end
+
+        function deinit()
+            if isassigned(COND_HANDLE) && isopen(COND_HANDLE[])
+                close(COND_HANDLE[])
+            end
+        end
+    end
+
     # Called on XKBlas init once
     function init()
-        nothing
+        XK.KA.Threading.init()
+    end
+
+    # Called on XKBlas deinit
+    function deinit()
+        XK.KA.Threading.deinit()
     end
 
     struct KernelTaskFormat
@@ -73,52 +134,34 @@ module KA
         command::Ptr{XK.xkrt_command_t},
         index::Ptr{XK.xkrt_queue_command_list_counter_t}
     )
-        fmt_ptr::Ptr{KernelTaskFormat} = XK.xkrt_task_args(task)
-        fmt=unsafe_load(fmt_ptr)
+        # XK.KA.Threading.submit_julia_runtime_lambda(() -> begin
+        #     fmt_ptr::Ptr{KernelTaskFormat} = XK.xkrt_task_args(task)
+        #     fmt=unsafe_load(fmt_ptr)
+        #     println("TODO: enqueue kernel to stream 'queue' and associate completion with the event at 'index'")
+        # end)
 
-        ####################
-        # compile for cuda #
-        ####################
+#          dim3 T = { (unsigned int) n, (unsigned int) m, 1 }; // How many threads we need
+#          dim3 B = { 32, 32, 1 }; // Bloc shape
+#          dim3 G = { (T.x + B.x - 1)/B.x,  (T.y + B.y - 1)/B.y, (T.z + B.z - 1)/B.z }; // Grid
 
-        XK.Logger.debug("Compiling...")
-
-        # Convert types
-        function to_cuda_types(T::Type)
-            if T <: AbstractVector
-                return CuDeviceVector{T.parameters[1], 1}
-            else
-                throw(ArgumentError("Type $T is not an AbstractVector"))
-            end
-        end
-        cu_access_types = map(to_cuda_types, fmt.access_types)
-
-        # Compile
-        args_type = Tuple{CUDA.CuContext, cu_access_types...}
-        cufunction = get_native_cufunction(fmt.kernel_function, args_type)
-        XK.Logger.debug("Compiled to $cufunction")
-
-#      dim3 T = { (unsigned int) n, (unsigned int) m, 1 }; // How many threads we need
-#      dim3 B = { 32, 32, 1 }; // Bloc shape
-#      dim3 G = { (T.x + B.x - 1)/B.x,  (T.y + B.y - 1)/B.y, (T.z + B.z - 1)/B.z }; // Grid
-
-        gx = 1
-        gy = 1
-        gz = 1
-        bx = 1
-        by = 1
-        bz = 1
-        shared_memory_bytes = 0
-        args = C_NULL
-        args_size = 0
-        XK.xkrt_device_kernel_launch(
-            runtime, device,
-            queue, index,
-            cufunction,
-            gx, gy, gz,
-            bx, by, bz,
-            shared_memory_bytes,
-            args, args_size
-        )
+#            gx = 1
+#            gy = 1
+#            gz = 1
+#            bx = 1
+#            by = 1
+#            bz = 1
+#            shared_memory_bytes = 0
+#            args = C_NULL
+#            args_size = 0
+#            XK.xkrt_device_kernel_launch(
+#                runtime, device,
+#                queue, index,
+#                cufunction,
+#                gx, gy, gz,
+#                bx, by, bz,
+#                shared_memory_bytes,
+#                args, args_size
+#            )
     end
 
     # task routine
@@ -127,10 +170,6 @@ module KA
        device::Ptr{XK.xkrt_device_t},
        task::Ptr{XK.xkrt_task_t}
     )
-        fmt_ptr::Ptr{KernelTaskFormat} = XK.xkrt_task_args(task)
-        fmt=unsafe_load(fmt_ptr)
-
-        XK.Logger.info("$fmt")
         fptr = @cfunction(
             task_ka_launcher,
             Cvoid,
@@ -142,7 +181,6 @@ module KA
              Ptr{XK.xkrt_queue_command_list_counter_t})
         )
         XK.xkrt_task_detachable_kernel_launch(runtime, device, task, fptr)
-        return
     end
 
     function Format(
@@ -156,7 +194,9 @@ module KA
                                                 Ptr{XK.xkrt_device_t},
                                                 Ptr{XK.xkrt_task_t}))
 
-        # set task format: the same for all drivers
+        #############################################
+        # set task format: the same for all drivers #
+        #############################################
         name = nameof(kernel_function)
         fmtid = XK.task_format_put("KA.$name")
         for target in instances(XK.xkrt_task_format_target_t)

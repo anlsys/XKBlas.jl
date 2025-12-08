@@ -29,6 +29,7 @@ module XKBlas
         XKBlas.init()
         XKBlas.KA.init()
         function cleanup()
+            XKBlas.KA.deinit()
             XKBlas.deinit()
         end
         atexit(cleanup)
