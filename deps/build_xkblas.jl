@@ -12,7 +12,7 @@ using OpenBLAS_jll
 XKBlas_pkg = Base.UUID("8d3f9e88-0651-4e8b-8f79-7d9d5f5f9e88")
 
 # Configuration from install.sh
-const XKRT_BRANCH   = "master"      # "master"
+const XKRT_BRANCH   = "c-api-for-julia"      # "master"
 const XKBLAS_BRANCH = "v2.0" # "v2.0"
 const XKRT_URL = "https://gitlab.inria.fr/xkaapi/dev-v2.git"
 const XKBLAS_URL = "https://gitlab.inria.fr/xkblas/dev.git"

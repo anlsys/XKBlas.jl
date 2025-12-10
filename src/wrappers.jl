@@ -14,45 +14,61 @@ function _async_trampoline(fptr::Ptr{Cvoid})
     return
 end
 
+#
+#   Generic API to spawn an XKRT task
+#   The 'may_run_julia_runtime' indicates whether the task may enter the Julia runtime.
+#   In such case,
+#       - it is made detachable
+#       - it will be executed by a Julia thread.
+#   see https://docs.julialang.org/en/v1/manual/calling-c-and-fortran-code/#Thread-safety
+#
 function device_async(
     device_global_id::xkrt_device_global_id_t,
-    fmtid::xkrt_task_format_id_t;
+    fmt_or_func::Union{xkrt_task_format_id_t, Function};
     set_accesses::Union{Function,Nothing}=nothing,
     args=C_NULL,
-    args_size=0
+    args_size=0,
+    may_run_julia_runtime=false
 )
     accesses = xkrt_access_t[]
     if set_accesses !== nothing
         set_accesses(accesses)
     end
+    local AC = length(accesses)
+    local ocr_access = UNSPECIFIED_TASK_ACCESS
+    local detach_ctr_initial = may_run_julia_runtime ? 1 : 0
 
-    local len = length(accesses)
-    if len == 0
-        XKBlas.async_with_format(device_global_id, fmtid, args, args_size)
-    else
-        XKBlas.async_with_format_with_accesses(device_global_id, fmtid, args, args_size, pointer(accesses), Cint(len))
-    end
-end
+    local flags = TASK_FLAG_ZERO
+    may_run_julia_runtime   && (flags |= TASK_FLAG_DETACHABLE)
+    (AC > 0)                && (flags |= TASK_FLAG_DEPENDENT)
+    (true)                  && (flags |= TASK_FLAG_DEVICE)
 
-function device_async(
-    device_global_id::xkrt_device_global_id_t,
-    body::Function;
-    set_accesses::Union{Function,Nothing}=nothing
-)
-    fptr = @cfunction(_async_trampoline, Cvoid, (Ptr{Cvoid},))
-    args = Ref(body)
-    _host_async_refs[fptr] = args  # preserve Ref until trampoline executed
+    runtime = XKBlas.xkrt_runtime_get()
 
-    accesses = xkrt_access_t[]
-    if set_accesses !== nothing
-        set_accesses(accesses)
-    end
-
-    local len = length(accesses)
-    if len == 0
-        XKBlas.async(device_global_id, fptr, args)
-    else
-        XKBlas.async_with_accesses(device_global_id, fptr, args, pointer(accesses), Cint(len))
+    if fmt_or_func isa xkrt_task_format_id_t
+        XKBlas.xkrt_task_spawn_generic(
+            runtime,
+            device_global_id,
+            flags,
+            fmt_or_func::xkrt_task_format_id_t,
+            args, args_size,
+            pointer(accesses), Cint(AC),
+            ocr_access,
+            detach_ctr_initial
+        )
+    elseif fmt_or_func isa Function
+        fptr = @cfunction(_async_trampoline, Cvoid, (Ptr{Cvoid},))
+        args = Ref(body)
+        _host_async_refs[fptr] = args  # preserve Ref until trampoline executed
+        XKBlas.Logger.fatal("TODO: 2 args here, the function body and user parameter")
+        # XKBlas.async_generic_with_format(
+        #     device_global_id,
+        #     fmt_or_func::xkrt_task_format_id_t,
+        #     flags,
+        #     args, args_size,
+        #     pointer(accesses), Cint(AC),
+        #     detach_ctr_initial
+        # )
     end
 end
 

@@ -98,34 +98,34 @@ module KA
 
     end
 
-    #   Get a CuFunction from a KA function annotated with @kernel
-    #
-    #   Example
-    #
-    #   @kernel unsafe_indices=true function my_kernel(A)
-    #      i = @index(Local, Linear)
-    #      @inbounds A[i] = i * 2.0
-    #   end
-    #   argtypes = Tuple{CuContext, CuDeviceVector{Float64, 1}}
-    #   ptr = get_native_cufunction(my_kernel, argtypes)
-    #
-    function get_native_cufunction(kernel_func::Function, argtypes::Type{<:Tuple})
-        GC.enable(false)
-        mod = parentmodule(kernel_func)
-        gpu_kernel_name = Symbol(:gpu_, nameof(kernel_func))
-        if isdefined(mod, gpu_kernel_name)
-            gpu_kernel = getfield(mod, gpu_kernel_name)
-            kernel = CUDA.cufunction(gpu_kernel, argtypes)
-            kernel_fun_ref = Ref(kernel.fun)    # TODO: garbage collection issues maybe
-            return Base.unsafe_convert(Ptr{Cvoid}, kernel_fun_ref)
+#    #   Get a CuFunction from a KA function annotated with @kernel
+#    #
+#    #   Example
+#    #
+#    #   @kernel unsafe_indices=true function my_kernel(A)
+#    #      i = @index(Local, Linear)
+#    #      @inbounds A[i] = i * 2.0
+#    #   end
+#    #   argtypes = Tuple{CuContext, CuDeviceVector{Float64, 1}}
+#    #   ptr = get_native_cufunction(my_kernel, argtypes)
+#    #
+#    function get_native_cufunction(kernel_func::Function, argtypes::Type{<:Tuple})
+#        GC.enable(false)
+#        mod = parentmodule(kernel_func)
+#        gpu_kernel_name = Symbol(:gpu_, nameof(kernel_func))
+#        if isdefined(mod, gpu_kernel_name)
+#            gpu_kernel = getfield(mod, gpu_kernel_name)
+#            kernel = CUDA.cufunction(gpu_kernel, argtypes)
+#            kernel_fun_ref = Ref(kernel.fun)    # TODO: garbage collection issues maybe
+#            return Base.unsafe_convert(Ptr{Cvoid}, kernel_fun_ref)
+#
+#        else
+#            error("Could not find generated GPU kernel: $gpu_kernel_name")
+#        end
+#        GC.enable(true)
+#    end
 
-        else
-            error("Could not find generated GPU kernel: $gpu_kernel_name")
-        end
-        GC.enable(true)
-    end
-
-    # kernel launcher routine
+    # kernel launcher routine - run by a julia task
     function task_ka_launcher(
         runtime::Ptr{XK.xkrt_runtime_t},
         device::Ptr{XK.xkrt_device_t},
@@ -134,11 +134,13 @@ module KA
         command::Ptr{XK.xkrt_command_t},
         index::Ptr{XK.xkrt_queue_command_list_counter_t}
     )
-        # XK.KA.Threading.submit_julia_runtime_lambda(() -> begin
-        #     fmt_ptr::Ptr{KernelTaskFormat} = XK.xkrt_task_args(task)
-        #     fmt=unsafe_load(fmt_ptr)
-        #     println("TODO: enqueue kernel to stream 'queue' and associate completion with the event at 'index'")
-        # end)
+        fmt_ptr::Ptr{KernelTaskFormat} = XK.xkrt_task_args(task)
+        fmt=unsafe_load(fmt_ptr)
+
+        XK.Logger.fatal("TODO: run synchronously and set 'event' fulfilld")
+
+        # for the initial ctr (julia tasks running julia runtime)
+        XK.xkrt_task_detachable_decr(runtime, task)
 
 #          dim3 T = { (unsigned int) n, (unsigned int) m, 1 }; // How many threads we need
 #          dim3 B = { 32, 32, 1 }; // Bloc shape
@@ -170,17 +172,22 @@ module KA
        device::Ptr{XK.xkrt_device_t},
        task::Ptr{XK.xkrt_task_t}
     )
-        fptr = @cfunction(
-            task_ka_launcher,
-            Cvoid,
-            (Ptr{XK.xkrt_runtime_t},
-             Ptr{XK.xkrt_device_t},
-             Ptr{XK.xkrt_task_t},
-             Ptr{XK.xkrt_queue_t},
-             Ptr{XK.xkrt_command_t},
-             Ptr{XK.xkrt_queue_command_list_counter_t})
-        )
-        XK.xkrt_task_detachable_kernel_launch(runtime, device, task, fptr)
+        # run by an xkrt thread, so dont do shit but submit a julia task
+        XK.KA.Threading.submit_julia_runtime_lambda(() -> begin
+            fptr = @cfunction(
+                task_ka_launcher,
+                Cvoid,
+                (Ptr{XK.xkrt_runtime_t},
+                 Ptr{XK.xkrt_device_t},
+                 Ptr{XK.xkrt_task_t},
+                 Ptr{XK.xkrt_queue_t},
+                 Ptr{XK.xkrt_command_t},
+                 Ptr{XK.xkrt_queue_command_list_counter_t})
+            )
+            GC.@preserve fptr begin
+                XK.xkrt_task_detachable_kernel_launch(runtime, device, task, fptr)
+            end
+        end)
     end
 
     function Format(
@@ -242,7 +249,7 @@ module KA
         args = Base.unsafe_convert(Ptr{Cvoid}, fmt_ref)
         args_size = sizeof(fmt)
         GC.@preserve fmt_ref begin
-            XK.device_async(device_global_id, fmt.fmtid, set_accesses=set_accesses, args=args, args_size=args_size)
+            XK.device_async(device_global_id, fmt.fmtid, set_accesses=set_accesses, args=args, args_size=args_size, may_run_julia_runtime=true)
         end
     end
 
