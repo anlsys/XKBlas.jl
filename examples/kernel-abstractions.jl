@@ -3,9 +3,9 @@ using KernelAbstractions
 using XKBlas
 const XK = XKBlas
 
-##################
-# Kernel example #
-##################
+#########################
+# Custom Kernel example #
+#########################
 
 # Declare kernels, and its memory accesses
 @kernel unsafe_indices=true function vector_add(a, b, c)
@@ -37,14 +37,20 @@ const vector_add_format = XK.KA.Format(
 # Execution example #
 #####################
 
+# This is just any host virtual memory
+# XKRT/XKBlas will automatically replicate to devices
 n = 4
 a = rand(T, n)
 b = rand(T, n)
 c = Vector{T}(undef, n)
 
-# Spawn a task that executes the kernel, and a task that reads back onto the host
+# Spawn a task that executes the kernel
 XK.KA.device_async(vector_add_format, a, b, c)
+
+# Spawn a task that reads onto the host, to write-back from the previous kernel execution
 XK.memory_coherent_async(c)
+
+# Wait for tasks completion
 XK.sync()
 
 # Check
