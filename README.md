@@ -10,5 +10,4 @@ See `examples/krylov-cg.jl`
 See `deps/README.md`
 
 # TODO
-- Add support for host-lambdas. Maybe binding to xkrt first
-- Add more examples
+- Rename the project XK.jl with support for XKRT/XKBlas and custom kernels via XK.KA

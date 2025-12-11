@@ -22,17 +22,19 @@ module XKBlas
     # --- High-level wrappers ---
     include("wrappers.jl")
     include("logger.jl")
-    include("kernel-abstractions.jl")
+    include("ka.jl")
+    include("threading.jl")
 
     # Init /Deinit xkblas - call when module is used
     function __init__()
         XKBlas.init()
         XKBlas.KA.init()
+        XKBlas.Threading.init()
         function cleanup()
             XKBlas.KA.deinit()
+            XKBlas.Threading.deinit()
             XKBlas.deinit()
         end
         atexit(cleanup)
     end
-
 end

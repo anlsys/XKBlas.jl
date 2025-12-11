@@ -12,8 +12,8 @@ m, n, k = n, n, n
 A = [Float32(rand()) for _ in 1:(m*k)]
 B = [Float32(rand()) for _ in 1:(k*n)]
 C = [Float32(0.0)    for _ in 1:(m*n)]
-alpha_vec = [Float32(1.0)]
-beta_vec  = [Float32(0.0)]
+alpha = Float32(1.0)
+beta  = Float32(0.0)
 lda, ldb, ldc = m, k, m
 transA, transB = XK.CblasNoTrans, XK.CblasNoTrans
 
@@ -24,10 +24,10 @@ transA, transB = XK.CblasNoTrans, XK.CblasNoTrans
     XK.gemm_async(
         transA, transB,
         m, n, k,
-        alpha_vec,
+        alpha,
         A, lda,
         B, ldb,
-        beta_vec,
+        beta,
         C, ldc
     )
 

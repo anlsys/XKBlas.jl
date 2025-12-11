@@ -28,7 +28,7 @@ function device_async(
     set_accesses::Union{Function,Nothing}=nothing,
     args=C_NULL,
     args_size=0,
-    may_run_julia_runtime=false
+    detach_ctr_initial=0
 )
     accesses = xkrt_access_t[]
     if set_accesses !== nothing
@@ -36,10 +36,9 @@ function device_async(
     end
     local AC = length(accesses)
     local ocr_access = UNSPECIFIED_TASK_ACCESS
-    local detach_ctr_initial = may_run_julia_runtime ? 1 : 0
 
     local flags = TASK_FLAG_ZERO
-    may_run_julia_runtime   && (flags |= TASK_FLAG_DETACHABLE)
+    detach_ctr_initial > 0  && (flags |= TASK_FLAG_DETACHABLE)
     (AC > 0)                && (flags |= TASK_FLAG_DEPENDENT)
     (true)                  && (flags |= TASK_FLAG_DEVICE)
 
@@ -58,7 +57,7 @@ function device_async(
         )
     elseif fmt_or_func isa Function
         fptr = @cfunction(_async_trampoline, Cvoid, (Ptr{Cvoid},))
-        args = Ref(body)
+        args = Ref(fmt_or_func::Function)
         _host_async_refs[fptr] = args  # preserve Ref until trampoline executed
         XKBlas.Logger.fatal("TODO: 2 args here, the function body and user parameter")
         # XKBlas.async_generic_with_format(

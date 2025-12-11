@@ -8,9 +8,22 @@ const XK = XKBlas
 #########################
 
 # Declare kernels, and its memory accesses
-@kernel unsafe_indices=true function vector_add(a, b, c)
-    i = @index(Local, Linear)
-    @inbounds c[i] = a[i] + b[i]
+
+# KA
+# @kernel unsafe_indices=true function vector_add(a, b, c)
+#     i = @index(Local, Linear)
+#     @inbounds c[i] = a[i] + b[i]
+# end
+
+using CUDA  # or ROCm, oneAPI, etc.
+using CUDA.CUDAKernels
+
+function vector_add(a, b, c, n)
+    i = (blockIdx().x - 1) * blockDim().x + threadIdx().x
+    if i <= n
+        @inbounds c[i] = a[i] + b[i]
+    end
+    return nothing
 end
 
 const T = Float64
@@ -22,15 +35,16 @@ const vector_add_format = XK.KA.Format(
     vector_add,
 
     # the grid launch configuration
-    (a, b, c) -> (length(a), 1, 1),
+    (a, b, c, n) -> (n, 1, 1),
 
     # the amount of shared memory
-    (a, b, c) -> 0,
+    (a, b, c, n) -> 0,
 
-    # the accessed memory
+    # the kernel parameters
     (a::AbstractVector{T}) -> XK.Access(XK.ACCESS_MODE_R, a),
     (b::AbstractVector{T}) -> XK.Access(XK.ACCESS_MODE_R, b),
-    (c::AbstractVector{T}) -> XK.Access(XK.ACCESS_MODE_W, c)
+    (c::AbstractVector{T}) -> XK.Access(XK.ACCESS_MODE_W, c),
+    (n::Int)               -> n
 )
 
 #####################
@@ -45,7 +59,7 @@ b = rand(T, n)
 c = Vector{T}(undef, n)
 
 # Spawn a task that executes the kernel
-XK.KA.device_async(vector_add_format, a, b, c)
+XK.KA.device_async(vector_add_format, a, b, c, n)
 
 # Spawn a task that reads onto the host, to write-back from the previous kernel execution
 XK.memory_coherent_async(c)
