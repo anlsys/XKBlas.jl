@@ -19,9 +19,9 @@ using CUDA  # or ROCm, oneAPI, etc.
 using CUDA.CUDAKernels
 
 function vector_add(a, b, c, n)
-    i = (blockIdx().x - 1) * blockDim().x + threadIdx().x
+    i = (CUDA.blockIdx().x - 1) * CUDA.blockDim().x + CUDA.threadIdx().x
     if i <= n
-        @inbounds c[i] = a[i] + b[i] + 1
+        @inbounds c[i] = a[i] + b[i]
     end
     return nothing
 end
@@ -34,7 +34,7 @@ const vector_add_format = XK.KA.Format(
     # the kernelabstraction's kernel
     vector_add,
 
-    # the grid launch configuration
+    # the number of threads
     (a, b, c, n) -> (n, 1, 1),
 
     # the amount of shared memory
@@ -71,6 +71,6 @@ XK.sync()
 apb = a + b
 println("  a = $a")
 println("  b = $b")
-println("a+b = $apb")
-println("  c = $c")
+println("a+b (Julia)  = $apb")
+println("  c (XKBLAS) = $c")
 @assert isapprox(apb, c; atol=1e-6)

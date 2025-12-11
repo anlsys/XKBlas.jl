@@ -28,7 +28,7 @@ function device_async(
     set_accesses::Union{Function,Nothing}=nothing,
     args=C_NULL,
     args_size=0,
-    detach_ctr_initial=0
+    detach_ctr_initial=nothing
 )
     accesses = xkrt_access_t[]
     if set_accesses !== nothing
@@ -38,9 +38,9 @@ function device_async(
     local ocr_access = UNSPECIFIED_TASK_ACCESS
 
     local flags = TASK_FLAG_ZERO
-    detach_ctr_initial > 0  && (flags |= TASK_FLAG_DETACHABLE)
-    (AC > 0)                && (flags |= TASK_FLAG_DEPENDENT)
-    (true)                  && (flags |= TASK_FLAG_DEVICE)
+    detach_ctr_initial != nothing  && (flags |= TASK_FLAG_DETACHABLE)
+    (AC > 0)                       && (flags |= TASK_FLAG_DEPENDENT)
+    (true)                         && (flags |= TASK_FLAG_DEVICE)
 
     runtime = XKBlas.xkrt_runtime_get()
 
@@ -144,7 +144,7 @@ end
 
 # Memory routines
 
-memory_coherent_async(x)            = memory_segment_coherent_async(x, length(x))
+memory_coherent_async(x)            = memory_segment_coherent_async(x, length(x)*sizeof(eltype(x)))
 memory_coherent_async(x, n)         = memory_segment_coherent_async(x, n*sizeof(eltype(x)))
 memory_coherent_async(A, lda, m, n) = memory_matrix_coherent_async(A, lda, m, n, sizeof(eltype(A)))
 

@@ -195,9 +195,14 @@ module KA
         # TODO: doing a lot of illegal stuff here (we are executing within a foreign thread)
         # But it seems to work, by avoiding any Julia runtime calls, but only XKRT calls
 
+        # retrieve task arguments
+        task_args::Ptr{Int8} = XK.xkrt_task_args(task)
+
         # retrieve task format
-        fmt_ptr::Ptr{Ptr{FormatStruct}} = XK.xkrt_task_args(task)
-        fmt = unsafe_pointer_to_objref(fmt_ptr)::FormatStruct
+        # 1. Get the raw C pointer (void*) pointing to the location of fmt_ptr
+        p_p_fmt::Ptr{Ptr{FormatStruct}} = Ptr{Ptr{FormatStruct}}(task_args)
+        fmt_ptr::Ptr{FormatStruct} = unsafe_load(p_p_fmt)
+        fmt::FormatStruct = unsafe_load(fmt_ptr)
 
         # TODO: need to protect that with a mutex in case multiple tasks uses the same format
         # cached cuda function
@@ -226,38 +231,70 @@ module KA
 
         end
 
-        # dim3 T = { (unsigned int) n, (unsigned int) m, 1 }; // How many threads we need
-        # dim3 B = { 32, 32, 1 }; // Bloc shape
-        # dim3 G = { (T.x + B.x - 1)/B.x,  (T.y + B.y - 1)/B.y, (T.z + B.z - 1)/B.z }; // Grid
+        ###############
+        # Grid launch #
+        ###############
 
-        # TODO: build the arguments
-        XK.Logger.fatal("TODO: build arguments")
-
-        # launch the kernel
-        gx = 1
-        gy = 1
-        gz = 1
-        bx = 1
+        threads::Ptr{Int8} = task_args + sizeof(Ptr{Cvoid})
+        tx::Int = unsafe_load(Ptr{Int}(threads + 0 * sizeof(Int)))
+        ty::Int = unsafe_load(Ptr{Int}(threads + 1 * sizeof(Int)))
+        tz::Int = unsafe_load(Ptr{Int}(threads + 2 * sizeof(Int)))
+        bx = 256
         by = 1
         bz = 1
-        shared_memory_bytes = 0
-        args = C_NULL
-        args_size = 0
+        gx = ceil(Int, tx / bx)
+        gy = ceil(Int, ty / by)
+        gz = ceil(Int, tz / bz)
+
+        XK.Logger.debug("threads, blocks, grid: $(tx) $(ty) $(tz) $(bx) $(by) $(bz) $(gx) $(gy) $(gz)")
+        #################
+        # Shared memory #
+        #################
+
+        shared_memory_size_ptr::Ptr{Int8} = task_args + sizeof(Ptr{Cvoid}) + 3 * sizeof(Int)
+        shared_memory_size::Int = unsafe_load(Ptr{Int}(shared_memory_size_ptr))
+
+        ###################
+        # Build arguments #
+        ###################
+
+        # retrieve args buffer, that is right after the format pointer in task arguments
+        args::Ptr{Int8} = task_args + sizeof(Ptr{Cvoid}) + 3*sizeof(Int) + 1*sizeof(Int)
+
+        # parse each accesses, and write replica address
+        access_id = 0
+        offset = 0
+        for return_type in fmt.return_types_list
+            if return_type <: XK.xkrt_access_t
+                arg::Ptr{Cvoid} = XK.xkrt_task_access_replica(task, access_id)
+                dst::Ptr{Int8}  = args + offset
+                unsafe_store!(Ptr{Ptr{Cvoid}}(dst), arg)
+                access_id += 1
+                offset += sizeof(Ptr{Cvoid})
+            else
+                # nothing to do, the producer thread already copied by value
+                offset += sizeof(return_type)
+            end
+        end
+
+        args_size = offset
+
+        #####################
+        # launch the kernel #
+        #####################
+
         XK.xkrt_device_kernel_launch(
             runtime, device,
             queue, index,
             fmt.fn,
             gx, gy, gz,
             bx, by, bz,
-            shared_memory_bytes,
-            args, args_size
+            shared_memory_size,
+            Ptr{Cvoid}(args), args_size
         )
 
         # unload the module
         # XK.xkrt_driver_module_unload(driver, moodule)
-
-        # task completed
-        # XK.xkrt_task_detachable_decr(runtime, task)
 
         return nothing
     end
@@ -331,9 +368,9 @@ module KA
         XK.Logger.debug("$(arg_types_list)")
         XK.Logger.debug("$(return_types_list)")
 
-        #########################################
+        ##############################################
         # Compile to bytecode to target CUDA devices #
-        #########################################
+        ##############################################
 
         # Compile to BYTECODE
         kernel_tt = Tuple{
@@ -414,9 +451,20 @@ module KA
         # Set the args buffer for launching the kernel later #
         ######################################################
 
-        # task arguments = [pointer_to_format | kernel_args...]
+        #
+        # Task arguments are
+        #   [pointer_to_format | tx | ty | tz | shared_memory_size | kernel_args...]
+        # with
+        #   pointer_to_forma t -> a 'void *' to the FormatStruct
+        #   tx, ty, tz         -> the number of threads to launch the kernel
+        #   shared_memory_size -> amount of shared memory
+        #   kernel_args        -> the kernel arguments, prefilled
+        #                           - empty spaces of sizeof(void *) bytes per access
+        #                           - values, for values passed by copy
+        #
 
-        # compute sizes for each kernel argument
+
+        # 1. compute sizes for each kernel argument
         arg_sizes = Vector{Int}(undef, length(kernel_args))
         for i in 1:length(kernel_args)
             if fmt.return_types_list[i] <: XK.xkrt_access_t
@@ -429,45 +477,52 @@ module KA
             end
         end
 
-        # allocate contiguous byte buffer
-        fmt_size = sizeof(Ptr{Cvoid})
-        total_size = fmt_size + sum(arg_sizes)
+        # 2. allocate contiguous byte buffer
+        total_size = sizeof(Ptr{Cvoid}) + 3*sizeof(Int) + 1*sizeof(Int) + sum(arg_sizes)
         args_buf = Vector{UInt8}(undef, total_size)
+        args_buf_ptr = Ptr{Int8}(pointer(args_buf))
 
-        # copy format ptr
+        # 3. copy format ptr
         fmt_ptr = Base.unsafe_convert(Ptr{Cvoid}, Ref(fmt))
-        unsafe_store!(Ptr{Ptr{Cvoid}}(pointer(args_buf)), fmt_ptr)
+        unsafe_store!(Ptr{Ptr{Cvoid}}(args_buf_ptr), fmt_ptr)
 
-        # fill rest of buffer with argument representations
-        offset = fmt_size
+        # 4. set the number of threads
+        tx, ty, tz = fmt.grid_function(kernel_args...)
+        threads_ptr = args_buf_ptr + sizeof(Ptr{Cvoid})
+        unsafe_store!(Ptr{Int}(threads_ptr + 0*sizeof(Int)), tx)
+        unsafe_store!(Ptr{Int}(threads_ptr + 1*sizeof(Int)), ty)
+        unsafe_store!(Ptr{Int}(threads_ptr + 2*sizeof(Int)), tz)
+
+        # 5. copy shared memory size
+        shared_memory_size = fmt.shared_memory_function(kernel_args...)
+        shared_memory_size_ptr = args_buf_ptr + sizeof(Ptr{Cvoid})+ 3*sizeof(Int)
+        unsafe_store!(Ptr{Int}(shared_memory_size_ptr), shared_memory_size)
+
+        # 6. fill rest of buffer with arguments
+        offset = sizeof(Ptr{Cvoid}) + 3*sizeof(Int) + 1*sizeof(Int)
         for i in 1:length(kernel_args)
             arg = kernel_args[i]
             arg_size = arg_sizes[i]
-            dest = pointer(args_buf) + offset
+            dest = Ptr{Int8}(args_buf_ptr + offset)
 
             if fmt.return_types_list[i] <: XK.xkrt_access_t
                 @assert isa(arg, AbstractArray)
                 @assert arg_size == sizeof(Ptr{Cvoid})
-
                 # nothing to do, this space will be filled when the kernel is
                 # scheduled with the replicated device memory pointer
-
             else
                 # copy raw bytes of the scalar argument value
                 arg_ref = Ref(arg)
-                XK.
-                GC.@preserve arg_ref begin
-                    arg_struct = Base.unsafe_convert(Ptr{typeof(arg)}, arg_ref)
-                    arg_u8 = Ptr{UInt8}(arg_struct)
-                    unsafe_copyto!(dest, arg_u8, arg_size)
-                end
+                arg_struct = Base.unsafe_convert(Ptr{typeof(arg)}, arg_ref)
+                arg_i8 = Ptr{Int8}(arg_struct)
+                unsafe_copyto!(Ptr{Int8}(dest), arg_i8, arg_size)
             end
 
             offset += arg_size
         end
 
         # set args pointer and size to the buffer
-        args = Ptr{Cvoid}(pointer(args_buf))
+        args = Ptr{Cvoid}(args_buf_ptr)
         args_size = total_size
 
         ############################################
@@ -488,7 +543,7 @@ module KA
             fmt.fmtid,
             set_accesses=set_accesses,
             args=args, args_size=args_size,
-            detach_ctr_initial=1
+            detach_ctr_initial=0
         )
     end
 
