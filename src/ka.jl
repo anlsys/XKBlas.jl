@@ -11,6 +11,122 @@ module KA
     import ..XKBlas
     const XK = XKBlas
 
+    #############################################################
+    # A disk cache to avoid recompiling kernels on every launch #
+    #############################################################
+
+    module Cache
+
+        import ...XKBlas
+        const XK = XKBlas
+
+        using Serialization, SHA
+
+        # Cache directory setup
+        const BYTECODE_CACHE_DIR = joinpath(homedir(), ".julia_xkrt_bytecode_cache")
+        mkpath(BYTECODE_CACHE_DIR)
+
+        """
+            compute_cache_key(kernel_function::Function, kernel_tt::Type)
+
+        Compute a unique hash for the kernel function and its argument types.
+        This hash is used as the cache key.
+        """
+        function compute_cache_key(kernel_function::Function, kernel_tt::Type)
+            # Get the method signature
+            methods_list = methods(kernel_function, kernel_tt.parameters)
+
+            if isempty(methods_list)
+                error("No methods found for kernel function with type signature $kernel_tt")
+            end
+
+            method = first(methods_list)
+
+            # Get code info - but hash it directly instead of converting to string
+            code_info = code_lowered(kernel_function, kernel_tt.parameters)
+
+            # Hash based on:
+            # 1. Function name
+            # 2. Method signature
+            # 3. Argument types
+            # 4. Code info (detects all code changes)
+            h = hash(nameof(kernel_function))
+            h = hash(method.sig, h)
+            h = hash(kernel_tt, h)
+            for ci in code_info
+                code_str = sprint(show, ci.code)    # that is slow, but makes it constant across invocation for the same code
+                h = hash(code_str, h)
+            end
+
+            # Convert to hex string for filename compatibility
+            return string(h, base=16, pad=16)
+        end
+
+        """
+            get_cache_path(cache_key::String)
+
+        Get the file path for a given cache key.
+        """
+        function get_cache_path(cache_key::String)
+            return joinpath(BYTECODE_CACHE_DIR, "$(cache_key).jls")
+        end
+
+        """
+            load_cached_bytecode(cache_key::String)
+
+        Load cached BYTECODE data from disk if it exists.
+        Returns `nothing` if cache miss.
+        """
+        function load_cached_bytecode(cache_key::String)
+            path = get_cache_path(cache_key)
+            if isfile(path)
+                try
+                    XK.Logger.debug("BYTECODE cache hit! Loading from disk... $(path)")
+                    r = deserialize(path)
+                    XK.Logger.debug("Loaded from disk")
+                    return r
+                catch e
+                    # If deserialization fails, remove the corrupted cache file
+                    rm(path; force=true)
+                end
+            end
+            XK.Logger.debug("BYTECODE cache miss.")
+            return nothing
+        end
+
+        """
+            save_cached_bytecode(cache_key::String, bytecode::String, bytecode_size::Int, bytecode_name::String)
+
+        Save BYTECODE compilation results to disk cache.
+        """
+        function save_cached_bytecode(cache_key::String, bytecode::String, bytecode_size::Int, bytecode_name::String)
+            path = get_cache_path(cache_key)
+            try
+                data = (bytecode=bytecode, bytecode_size=bytecode_size, bytecode_name=bytecode_name)
+                serialize(path, data)
+                XK.Logger.debug("Saved BYTECODE to cache: $path")
+            catch e
+                @warn "Failed to save BYTECODE cache to $path: $e"
+            end
+        end
+
+        """
+            clear_bytecode_cache!()
+
+        Clear all cached BYTECODE files from disk.
+        """
+        function clear_bytecode_cache!()
+            if isdir(BYTECODE_CACHE_DIR)
+                for file in readdir(BYTECODE_CACHE_DIR)
+                    filepath = joinpath(BYTECODE_CACHE_DIR, file)
+                    rm(filepath; force=true)
+                end
+                @info "Cleared BYTECODE cache directory: $BYTECODE_CACHE_DIR"
+            end
+        end
+
+    end
+
     # Called on XKBlas init once
     function init()
     end
@@ -19,19 +135,20 @@ module KA
     function deinit()
     end
 
-    struct FormatStruct
+    # Mutable so it is passed by reference
+    mutable struct FormatStruct
 
         # 1. The KA function annotated with @kernel
         kernel_function::Function
 
-        # 2. function PTX
-        ptx::String
+        # 2. function BYTECODE
+        bytecode::String
 
-        # 3. function PTX size
-        ptx_size::Int
+        # 3. function BYTECODE size
+        bytecode_size::Int
 
-        # 4. function PTX name
-        ptx_name::String
+        # 4. function BYTECODE name
+        bytecode_name::String
 
         # 5. function to get the grid launch dimensions
         grid_function::Function
@@ -79,8 +196,8 @@ module KA
         # But it seems to work, by avoiding any Julia runtime calls, but only XKRT calls
 
         # retrieve task format
-        fmt_ptr::Ptr{FormatStruct} = XK.xkrt_task_args(task)
-        fmt=unsafe_load(fmt_ptr)
+        fmt_ptr::Ptr{Ptr{FormatStruct}} = XK.xkrt_task_args(task)
+        fmt = unsafe_pointer_to_objref(fmt_ptr)::FormatStruct
 
         # TODO: need to protect that with a mutex in case multiple tasks uses the same format
         # cached cuda function
@@ -88,16 +205,16 @@ module KA
 
             @assert fmt.fn == C_NULL
 
-            # compile the ptx
+            # compile the bytecode
             driver           = XK.xkrt_device_driver_get(runtime, device)
             device_driver_id = XK.xkrt_device_driver_id_get(runtime, device)
-            bin              = fmt.ptx
-            binsize          = fmt.ptx_size
+            bin              = fmt.bytecode
+            binsize          = fmt.bytecode_size
             format           = XK.XKRT_DRIVER_MODULE_FORMAT_NATIVE
             moodule          = XK.xkrt_driver_module_load(driver, device_driver_id, bin, binsize, format)
 
             # get executable function
-            fn = XK.xkrt_driver_module_get_fn(driver, moodule, fmt.ptx_name)
+            fn = XK.xkrt_driver_module_get_fn(driver, moodule, fmt.bytecode_name)
 
             # save module and fn
             unsafe_store!(Ptr{XK.xkrt_driver_module_t   }(fmt_ptr + FORMAT_STRUCT_MOODULE_OFFSET), moodule)
@@ -215,10 +332,10 @@ module KA
         XK.Logger.debug("$(return_types_list)")
 
         #########################################
-        # Compile to ptx to target CUDA devices #
+        # Compile to bytecode to target CUDA devices #
         #########################################
 
-        # Compile to PTX
+        # Compile to BYTECODE
         kernel_tt = Tuple{
             map(
                 T_abstract -> (
@@ -228,35 +345,48 @@ module KA
                 arg_types_list
             )...
         }
-        XK.Logger.debug("Compiling to PTX...")
-        XK.Logger.debug("$(kernel_tt)")
-        buf = IOBuffer()
-        CUDA.code_ptx(buf, kernel_function, kernel_tt; raw=true, kernel=true)
-        ptx = String(take!(buf))
-        ptx_size = length(ptx)
-        XK.Logger.debug("Compiled to")
-        XK.Logger.debug(ptx)
-        XK.Logger.debug("PTX size = $(ptx_size)")
 
-        # Regex to find function names:
-        # 1. `\.func\s+` : Matches the literal ".func" followed by one or more whitespace characters.
-        # 2. `([a-zA-Z_0-9]+)`: This is the CAPTURE GROUP. It matches and captures the function name,
-        #                       which consists of letters, numbers, and underscores (the standard for assembly/compiler-generated names).
-        # 3. `\(`: Matches the literal opening parenthesis that follows the function name.
-        regex_func = r"\.entry\s+([a-zA-Z_0-9]+)\("
+        # Try to load from cache
+        XK.Logger.debug("Computing cache key...")
+        cache_key = XK.KA.Cache.compute_cache_key(kernel_function, kernel_tt)
+        XK.Logger.debug("Cache key: $(cache_key)")
+        cached_data = XK.KA.Cache.load_cached_bytecode(cache_key)
 
-        # Find all matches and extract the captured name
-        function_names = [m.captures[1] for m in eachmatch(regex_func, ptx)]
-        XK.Logger.debug("Functions in the PTX: $(function_names)")
-        @assert length(function_names) == 1
-        ptx_name = function_names[1]
+        if cached_data !== nothing
+            bytecode = cached_data.bytecode
+            bytecode_size = cached_data.bytecode_size
+            bytecode_name = cached_data.bytecode_name
+        else
+            # Compile to BYTECODE - TODO: do that portably, not only ptx
+            buf = IOBuffer()
+            XK.Logger.debug("Compiling to BYTECODE")
+            CUDA.code_ptx(buf, kernel_function, kernel_tt; raw=true, kernel=true)
+            bytecode = String(take!(buf))
+            bytecode_size = length(bytecode)
+
+            XK.Logger.debug("Compiled to BYTECODE")
+            XK.Logger.debug(bytecode)
+
+            # Regex to find function names
+            regex_func = r"\.entry\s+([a-zA-Z_0-9]+)\("
+
+            # Find all matches and extract the captured name
+            function_names = [m.captures[1] for m in eachmatch(regex_func, bytecode)]
+            XK.Logger.debug("Functions in the BYTECODE: $(function_names)")
+            @assert length(function_names) == 1
+            bytecode_name = String(function_names[1])
+
+            # Save to cache
+            XK.KA.Cache.save_cached_bytecode(cache_key, bytecode, bytecode_size, bytecode_name)
+        end
+        XK.Logger.debug("BYTECODE of name $(bytecode_name) and size $(bytecode_size)")
 
         # return the format
         return  FormatStruct(
                     kernel_function,            # The Julia function
-                    ptx,                        # function PTX
-                    ptx_size,                   # function PTX size
-                    ptx_name,                   # function PTX name
+                    bytecode,                   # function BYTECODE
+                    bytecode_size,              # function BYTECODE size
+                    bytecode_name,              # function BYTECODE name
                     grid_function,              # function to get the grid launch dimensions
                     shared_memory_function,     # function to get the amount of shared memory to use
                     access_functions,           # functions telling how parameters of the kernels are accessed
@@ -275,9 +405,75 @@ module KA
         fmt::FormatStruct,
         kernel_args...
     )
+        # TODO: check that argument matches the format arguments more precisely
         if length(fmt.access_functions) !== length(kernel_args)
             throw(ErrorException("Arguments do not match the task format accesses"))
         end
+
+        ######################################################
+        # Set the args buffer for launching the kernel later #
+        ######################################################
+
+        # task arguments = [pointer_to_format | kernel_args...]
+
+        # compute sizes for each kernel argument
+        arg_sizes = Vector{Int}(undef, length(kernel_args))
+        for i in 1:length(kernel_args)
+            if fmt.return_types_list[i] <: XK.xkrt_access_t
+                # we will store a raw pointer (machine pointer size)
+                arg_sizes[i] = sizeof(Ptr{Cvoid})
+            else
+                # store the raw bytes of the value
+                # sizeof should work for typical scalar isbitstype arguments (Int, Float64, etc.)
+                arg_sizes[i] = sizeof(kernel_args[i])
+            end
+        end
+
+        # allocate contiguous byte buffer
+        fmt_size = sizeof(Ptr{Cvoid})
+        total_size = fmt_size + sum(arg_sizes)
+        args_buf = Vector{UInt8}(undef, total_size)
+
+        # copy format ptr
+        fmt_ptr = Base.unsafe_convert(Ptr{Cvoid}, Ref(fmt))
+        unsafe_store!(Ptr{Ptr{Cvoid}}(pointer(args_buf)), fmt_ptr)
+
+        # fill rest of buffer with argument representations
+        offset = fmt_size
+        for i in 1:length(kernel_args)
+            arg = kernel_args[i]
+            arg_size = arg_sizes[i]
+            dest = pointer(args_buf) + offset
+
+            if fmt.return_types_list[i] <: XK.xkrt_access_t
+                @assert isa(arg, AbstractArray)
+                @assert arg_size == sizeof(Ptr{Cvoid})
+
+                # nothing to do, this space will be filled when the kernel is
+                # scheduled with the replicated device memory pointer
+
+            else
+                # copy raw bytes of the scalar argument value
+                arg_ref = Ref(arg)
+                XK.
+                GC.@preserve arg_ref begin
+                    arg_struct = Base.unsafe_convert(Ptr{typeof(arg)}, arg_ref)
+                    arg_u8 = Ptr{UInt8}(arg_struct)
+                    unsafe_copyto!(dest, arg_u8, arg_size)
+                end
+            end
+
+            offset += arg_size
+        end
+
+        # set args pointer and size to the buffer
+        args = Ptr{Cvoid}(pointer(args_buf))
+        args_size = total_size
+
+        ############################################
+        # create a lambda to set the task accesses #
+        ############################################
+
         set_accesses = (accesses) -> begin
             @assert length(fmt.access_functions) === length(fmt.return_types_list)
             for i in 1:length(kernel_args)
@@ -287,12 +483,13 @@ module KA
             end
         end
 
-        fmt_ref = Ref(fmt)
-        args = Base.unsafe_convert(Ptr{Cvoid}, fmt_ref)
-        args_size = sizeof(fmt)
-        GC.@preserve fmt_ref begin
-            XK.device_async(device_global_id, fmt.fmtid, set_accesses=set_accesses, args=args, args_size=args_size, detach_ctr_initial=1)
-        end
+        XK.device_async(
+            device_global_id,
+            fmt.fmtid,
+            set_accesses=set_accesses,
+            args=args, args_size=args_size,
+            detach_ctr_initial=1
+        )
     end
 
     function device_async(fmt::FormatStruct, kernel_args...)

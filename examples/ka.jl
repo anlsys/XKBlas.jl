@@ -21,7 +21,7 @@ using CUDA.CUDAKernels
 function vector_add(a, b, c, n)
     i = (blockIdx().x - 1) * blockDim().x + threadIdx().x
     if i <= n
-        @inbounds c[i] = a[i] + b[i]
+        @inbounds c[i] = a[i] + b[i] + 1
     end
     return nothing
 end

@@ -37,4 +37,5 @@ module XKBlas
         end
         atexit(cleanup)
     end
+
 end
