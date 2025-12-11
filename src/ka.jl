@@ -11,6 +11,9 @@ module KA
     import ..XKBlas
     const XK = XKBlas
 
+    # Julia CU context is 16 bytes
+    const JL_CU_CONTEXT_SIZE = 16
+
     #############################################################
     # A disk cache to avoid recompiling kernels on every launch #
     #############################################################
@@ -259,16 +262,16 @@ module KA
         ###################
 
         # retrieve args buffer, that is right after the format pointer in task arguments
-        args::Ptr{Int8} = task_args + sizeof(Ptr{Cvoid}) + 3*sizeof(Int) + 1*sizeof(Int)
+        kernel_args::Ptr{Int8} = task_args + sizeof(Ptr{Cvoid}) + 3*sizeof(Int) + 1*sizeof(Int)
 
         # parse each accesses, and write replica address
         access_id = 0
-        offset = 0
+        offset = JL_CU_CONTEXT_SIZE
         for return_type in fmt.return_types_list
             if return_type <: XK.xkrt_access_t
-                arg::Ptr{Cvoid} = XK.xkrt_task_access_replica(task, access_id)
-                dst::Ptr{Int8}  = args + offset
-                unsafe_store!(Ptr{Ptr{Cvoid}}(dst), arg)
+                device_ptr::Ptr{Cvoid} = XK.xkrt_task_access_replica(task, access_id)
+                kernel_arg::Ptr{Int8}  = kernel_args + offset
+                unsafe_store!(Ptr{Ptr{Cvoid}}(kernel_arg), device_ptr)
                 access_id += 1
                 offset += sizeof(Ptr{Cvoid})
             else
@@ -277,7 +280,7 @@ module KA
             end
         end
 
-        args_size = offset
+        kernel_args_size = offset
 
         #####################
         # launch the kernel #
@@ -290,11 +293,8 @@ module KA
             gx, gy, gz,
             bx, by, bz,
             shared_memory_size,
-            Ptr{Cvoid}(args), args_size
+            Ptr{Cvoid}(kernel_args), kernel_args_size
         )
-
-        # unload the module
-        # XK.xkrt_driver_module_unload(driver, moodule)
 
         return nothing
     end
@@ -375,13 +375,15 @@ module KA
         # Compile to BYTECODE
         kernel_tt = Tuple{
             map(
-                T_abstract -> (
-                    T_abstract <: AbstractVector ? CUDA.CuDeviceVector{eltype(T_abstract), 1} :
-                    T_abstract
+                T -> (
+                    T <: AbstractVector ? Ptr{eltype(T)} :
+                    # T <: AbstractVector ? CUDA.CuDeviceVector{eltype(T), 1} :
+                    T
                 ),
                 arg_types_list
             )...
         }
+        XK.Logger.debug("$(kernel_tt)")
 
         # Try to load from cache
         XK.Logger.debug("Computing cache key...")
@@ -397,7 +399,7 @@ module KA
             # Compile to BYTECODE - TODO: do that portably, not only ptx
             buf = IOBuffer()
             XK.Logger.debug("Compiling to BYTECODE")
-            CUDA.code_ptx(buf, kernel_function, kernel_tt; raw=true, kernel=true)
+            CUDA.code_ptx(buf, kernel_function, kernel_tt; raw=false, kernel=true)
             bytecode = String(take!(buf))
             bytecode_size = length(bytecode)
 
@@ -453,77 +455,77 @@ module KA
 
         #
         # Task arguments are
-        #   [pointer_to_format | tx | ty | tz | shared_memory_size | kernel_args...]
+        #   [pointer_to_format | tx | ty | tz | shared_memory_size | julia_context | kernel_args...]
         # with
         #   pointer_to_forma t -> a 'void *' to the FormatStruct
         #   tx, ty, tz         -> the number of threads to launch the kernel
         #   shared_memory_size -> amount of shared memory
+        #   julia_context      -> opaque structure of `JL_CU_CONTEXT_SIZE` bytes
         #   kernel_args        -> the kernel arguments, prefilled
         #                           - empty spaces of sizeof(void *) bytes per access
         #                           - values, for values passed by copy
         #
 
-
         # 1. compute sizes for each kernel argument
-        arg_sizes = Vector{Int}(undef, length(kernel_args))
+        kernel_arg_sizes = Vector{Int}(undef, length(kernel_args))
         for i in 1:length(kernel_args)
             if fmt.return_types_list[i] <: XK.xkrt_access_t
                 # we will store a raw pointer (machine pointer size)
-                arg_sizes[i] = sizeof(Ptr{Cvoid})
+                kernel_arg_sizes[i] = sizeof(Ptr{Cvoid})
             else
                 # store the raw bytes of the value
                 # sizeof should work for typical scalar isbitstype arguments (Int, Float64, etc.)
-                arg_sizes[i] = sizeof(kernel_args[i])
+                kernel_arg_sizes[i] = sizeof(kernel_args[i])
             end
         end
 
         # 2. allocate contiguous byte buffer
-        total_size = sizeof(Ptr{Cvoid}) + 3*sizeof(Int) + 1*sizeof(Int) + sum(arg_sizes)
-        args_buf = Vector{UInt8}(undef, total_size)
-        args_buf_ptr = Ptr{Int8}(pointer(args_buf))
+        total_size = sizeof(Ptr{Cvoid}) + 3*sizeof(Int) + 1*sizeof(Int) + JL_CU_CONTEXT_SIZE + sum(kernel_arg_sizes)
+        task_args_buf = Vector{UInt8}(undef, total_size)
+        task_args_buf_ptr = Ptr{Int8}(pointer(task_args_buf))
 
         # 3. copy format ptr
         fmt_ptr = Base.unsafe_convert(Ptr{Cvoid}, Ref(fmt))
-        unsafe_store!(Ptr{Ptr{Cvoid}}(args_buf_ptr), fmt_ptr)
+        unsafe_store!(Ptr{Ptr{Cvoid}}(task_args_buf_ptr), fmt_ptr)
 
         # 4. set the number of threads
         tx, ty, tz = fmt.grid_function(kernel_args...)
-        threads_ptr = args_buf_ptr + sizeof(Ptr{Cvoid})
+        threads_ptr = task_args_buf_ptr + sizeof(Ptr{Cvoid})
         unsafe_store!(Ptr{Int}(threads_ptr + 0*sizeof(Int)), tx)
         unsafe_store!(Ptr{Int}(threads_ptr + 1*sizeof(Int)), ty)
         unsafe_store!(Ptr{Int}(threads_ptr + 2*sizeof(Int)), tz)
 
         # 5. copy shared memory size
         shared_memory_size = fmt.shared_memory_function(kernel_args...)
-        shared_memory_size_ptr = args_buf_ptr + sizeof(Ptr{Cvoid})+ 3*sizeof(Int)
+        shared_memory_size_ptr = task_args_buf_ptr + sizeof(Ptr{Cvoid})+ 3*sizeof(Int)
         unsafe_store!(Ptr{Int}(shared_memory_size_ptr), shared_memory_size)
 
         # 6. fill rest of buffer with arguments
-        offset = sizeof(Ptr{Cvoid}) + 3*sizeof(Int) + 1*sizeof(Int)
+        offset = sizeof(Ptr{Cvoid}) + 3*sizeof(Int) + 1*sizeof(Int) + JL_CU_CONTEXT_SIZE
         for i in 1:length(kernel_args)
-            arg = kernel_args[i]
-            arg_size = arg_sizes[i]
-            dest = Ptr{Int8}(args_buf_ptr + offset)
+            kernel_arg = Ptr{Int8}(task_args_buf_ptr + offset)
+            kernel_arg_size = kernel_arg_sizes[i]
+            kernel_arg_value = kernel_args[i]
 
             if fmt.return_types_list[i] <: XK.xkrt_access_t
-                @assert isa(arg, AbstractArray)
-                @assert arg_size == sizeof(Ptr{Cvoid})
+                @assert isa(kernel_arg_value, AbstractArray)
+                @assert kernel_arg_size == sizeof(Ptr{Cvoid})
                 # nothing to do, this space will be filled when the kernel is
                 # scheduled with the replicated device memory pointer
             else
                 # copy raw bytes of the scalar argument value
-                arg_ref = Ref(arg)
-                arg_struct = Base.unsafe_convert(Ptr{typeof(arg)}, arg_ref)
-                arg_i8 = Ptr{Int8}(arg_struct)
-                unsafe_copyto!(Ptr{Int8}(dest), arg_i8, arg_size)
+                kernel_arg_value_ref = Ref(kernel_arg_value)
+                kernel_arg_value_struct = Base.unsafe_convert(Ptr{typeof(kernel_arg_value)}, kernel_arg_value_ref)
+                kernel_arg_value_i8 = Ptr{Int8}(kernel_arg_value_struct)
+                unsafe_copyto!(kernel_arg, kernel_arg_value_i8, kernel_arg_size)
             end
 
-            offset += arg_size
+            offset += kernel_arg_size
         end
 
         # set args pointer and size to the buffer
-        args = Ptr{Cvoid}(args_buf_ptr)
-        args_size = total_size
+        task_args = Ptr{Cvoid}(task_args_buf_ptr)
+        task_args_size = total_size
 
         ############################################
         # create a lambda to set the task accesses #
@@ -542,7 +544,7 @@ module KA
             device_global_id,
             fmt.fmtid,
             set_accesses=set_accesses,
-            args=args, args_size=args_size,
+            args=task_args, args_size=task_args_size,
             detach_ctr_initial=0
         )
     end

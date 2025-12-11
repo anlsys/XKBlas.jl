@@ -18,10 +18,17 @@ const XK = XKBlas
 using CUDA  # or ROCm, oneAPI, etc.
 using CUDA.CUDAKernels
 
+# TODO: move that in XKRT
+# Define getindex and setindex for Ptr{T}
+@inline Base.getindex(p::Ptr{T}, i::Integer) where T = unsafe_load(p, i)
+@inline Base.setindex!(p::Ptr{T}, val, i::Integer) where T = unsafe_store!(p, val, i)
+
+# the actual kernel a/b/c are raw pointers
+#function vector_add(a::Ptr{T}, b::Ptr{T}, c::Ptr{T}, n::Int) where T
 function vector_add(a, b, c, n)
-    i = (CUDA.blockIdx().x - 1) * CUDA.blockDim().x + CUDA.threadIdx().x
+    i = (blockIdx().x - 1) * blockDim().x + threadIdx().x
     if i <= n
-        @inbounds c[i] = a[i] + b[i]
+        c[i] = a[i] + b[i]
     end
     return nothing
 end
