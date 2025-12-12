@@ -1,9 +1,14 @@
 #
 #   Kernel abstractions built in XKBlas
+#   Kernel abstractions built-in XKBlas
+#   Main differences with KernelAbstractions.jl and others, is:
+#       - passed parameters are raw pointers, not Julia types
+#       - there no bounds check: @inbounds is ignored
 #
 #   Currently only supports CUDA.
 #   TODO: support other and add macros for block dim and shared memory
 #
+
 module KA
 
     using CUDA
@@ -11,8 +16,15 @@ module KA
     import ..XKBlas
     const XK = XKBlas
 
-    # Julia CU context is 16 bytes
+    # Julia CU context is 16 bytes, ignore them
     const JL_CU_CONTEXT_SIZE = 16
+
+    # GPU block size magic number
+    const BLOCK_SIZE = 256
+
+    # Define getindex and setindex for Ptr{T}
+    @inline Base.getindex( p::Ptr{T},      i::Integer) where T = unsafe_load(p, i)
+    @inline Base.setindex!(p::Ptr{T}, val, i::Integer) where T = unsafe_store!(p, val, i)
 
     #############################################################
     # A disk cache to avoid recompiling kernels on every launch #
@@ -138,6 +150,25 @@ module KA
     function deinit()
     end
 
+    # Launcher
+    struct LauncherStruct
+
+        # 1. function to get the grid launch dimensions
+        threads::Union{Function, Nothing}
+
+        # 2. function to get the amount of shared memory to use
+        shared_memory::Union{Function, Nothing}
+
+    end
+
+    # Format launch configuration
+    function Launcher(;
+        threads::Union{Function, Nothing}=nothing,
+        shared_memory::Union{Function, Nothing}=nothing
+    )
+        return LauncherStruct(threads, shared_memory)
+    end
+
     # Mutable so it is passed by reference
     mutable struct FormatStruct
 
@@ -153,38 +184,35 @@ module KA
         # 4. function BYTECODE name
         bytecode_name::String
 
-        # 5. function to get the grid launch dimensions
-        grid_function::Function
+        # 5. laucher options
+        launcher::LauncherStruct
 
-        # 6. function to get the amount of shared memory to use
-        shared_memory_function::Function
-
-        # 7. functions telling how parameters of the kernels are accessed
+        # 6. functions telling how parameters of the kernels are accessed
         access_functions::Tuple{Vararg{Function}}
 
-        # 8. argument types used by each argument function
+        # 7. argument types used by each argument function
         arg_types_list::Vector{Type}
 
-        # 9. return types used by each argument function
+        # 8. return types used by each argument function
         return_types_list::Vector{Type}
 
-        # 10. Number of access for tasks
+        # 9. Number of access for tasks
         num_access::Int
 
-        # 11. XKRT task format id
+        # 10. XKRT task format id
         fmtid::XK.xkrt_task_format_id_t
 
-        # 12. Cached module
+        # 11. Cached module
         moodule::XK.xkrt_driver_module_t
 
-        # 13. Cached function
+        # 12. Cached function
         fn::XK.xkrt_driver_module_fn_t
 
     end
 
     # offset in the format struct
-    const FORMAT_STRUCT_MOODULE_OFFSET = fieldoffset(XK.KA.FormatStruct, 12)
-    const FORMAT_STRUCT_FN_OFFSET      = fieldoffset(XK.KA.FormatStruct, 13)
+    const FORMAT_STRUCT_MOODULE_OFFSET = fieldoffset(XK.KA.FormatStruct, 11)
+    const FORMAT_STRUCT_FN_OFFSET      = fieldoffset(XK.KA.FormatStruct, 12)
 
     # kernel launcher routine - run by a julia task
     function task_ka_launcher(
@@ -242,7 +270,7 @@ module KA
         tx::Int = unsafe_load(Ptr{Int}(threads + 0 * sizeof(Int)))
         ty::Int = unsafe_load(Ptr{Int}(threads + 1 * sizeof(Int)))
         tz::Int = unsafe_load(Ptr{Int}(threads + 2 * sizeof(Int)))
-        bx = 256
+        bx = BLOCK_SIZE
         by = 1
         bz = 1
         gx = ceil(Int, tx / bx)
@@ -329,11 +357,11 @@ module KA
         return nothing
     end
 
+    # Create an XK.KA.FormatStruct
     function Format(
         kernel_function::Function,
-        grid_function::Function,
-        shared_memory_function::Function,
-        access_functions::Function...
+        access_functions::Function...;
+        launcher::LauncherStruct=LauncherStruct(nothing, nothing)
     )
         # task main entry point
         task_main = @cfunction(task_ka_main, Cvoid, (Ptr{XK.xkrt_runtime_t}, Ptr{XK.xkrt_device_t}, Ptr{XK.xkrt_task_t}))
@@ -426,8 +454,7 @@ module KA
                     bytecode,                   # function BYTECODE
                     bytecode_size,              # function BYTECODE size
                     bytecode_name,              # function BYTECODE name
-                    grid_function,              # function to get the grid launch dimensions
-                    shared_memory_function,     # function to get the amount of shared memory to use
+                    launcher,                   # launch parameters (grid size, shared memory...)
                     access_functions,           # functions telling how parameters of the kernels are accessed
                     arg_types_list,             # argument types used by each argument function
                     return_types_list,          # return types used by each argument function
@@ -436,6 +463,14 @@ module KA
                     C_NULL,                     # Cached module
                     C_NULL                      # Cached function
                )
+    end
+
+    function Format(
+        kernel_function::Function,
+        launcher::LauncherStruct,
+        access_functions::Function...
+    )
+        return Format(kernel_function, access_functions...; launcher = launcher)
     end
 
     # Spawn a task to the given device, with the given XK.KA format and kernel arguments
@@ -489,14 +524,22 @@ module KA
         unsafe_store!(Ptr{Ptr{Cvoid}}(task_args_buf_ptr), fmt_ptr)
 
         # 4. set the number of threads
-        tx, ty, tz = fmt.grid_function(kernel_args...)
+        if fmt.launcher.threads != nothing
+            tx, ty, tz = fmt.launcher.threads(kernel_args...)
+        else
+            tx, ty, tz = BLOCK_SIZE, 1, 1
+        end
         threads_ptr = task_args_buf_ptr + sizeof(Ptr{Cvoid})
         unsafe_store!(Ptr{Int}(threads_ptr + 0*sizeof(Int)), tx)
         unsafe_store!(Ptr{Int}(threads_ptr + 1*sizeof(Int)), ty)
         unsafe_store!(Ptr{Int}(threads_ptr + 2*sizeof(Int)), tz)
 
         # 5. copy shared memory size
-        shared_memory_size = fmt.shared_memory_function(kernel_args...)
+        if fmt.launcher.shared_memory != nothing
+            shared_memory_size = fmt.launcher.shared_memory(kernel_args...)
+        else
+            shared_memory_size = 0
+        end
         shared_memory_size_ptr = task_args_buf_ptr + sizeof(Ptr{Cvoid})+ 3*sizeof(Int)
         unsafe_store!(Ptr{Int}(shared_memory_size_ptr), shared_memory_size)
 
@@ -549,9 +592,37 @@ module KA
         )
     end
 
+    # device_async wrapper to automatically target device 1
     function device_async(fmt::FormatStruct, kernel_args...)
         device_global_id = XK.xkrt_device_global_id_t(1)
         return XK.KA.device_async(device_global_id, fmt, kernel_args...)
+    end
+
+    """
+        @kernel f(args...) = ...
+
+    Wraps a function and ensures it always returns `nothing`.
+    """
+    macro kernel(ex)
+        # Only works on function definitions
+        if ex.head != :function
+            error("@kernel must be applied to a function definition")
+        end
+
+        # Extract the name and body
+        fname = ex.args[1]   # e.g., :(vector_add(a,b,c,n))
+        fbody = ex.args[2]
+
+        # Wrap the body so the function always returns nothing
+        wrapped = quote
+            $(Expr(:function, fname, quote
+                $fbody
+                return nothing
+            end))
+        end
+
+        # Return an expression that assigns the wrapped function to the original name
+        return esc(wrapped)
     end
 
 end

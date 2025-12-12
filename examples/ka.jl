@@ -7,30 +7,15 @@ const XK = XKBlas
 # Custom Kernel example #
 #########################
 
-# Declare kernels, and its memory accesses
-
-# KA
-# @kernel unsafe_indices=true function vector_add(a, b, c)
-#     i = @index(Local, Linear)
-#     @inbounds c[i] = a[i] + b[i]
-# end
-
-using CUDA  # or ROCm, oneAPI, etc.
-using CUDA.CUDAKernels
-
-# TODO: move that in XKRT
-# Define getindex and setindex for Ptr{T}
-@inline Base.getindex(p::Ptr{T}, i::Integer) where T = unsafe_load(p, i)
-@inline Base.setindex!(p::Ptr{T}, val, i::Integer) where T = unsafe_store!(p, val, i)
+# Declare kernel
+using CUDA
 
 # the actual kernel a/b/c are raw pointers
-#function vector_add(a::Ptr{T}, b::Ptr{T}, c::Ptr{T}, n::Int) where T
-function vector_add(a, b, c, n)
-    i = (blockIdx().x - 1) * blockDim().x + threadIdx().x
+@XK.KA.kernel function vector_add(a, b, c, n)
+    i = (CUDA.blockIdx().x - 1) * CUDA.blockDim().x + CUDA.threadIdx().x
     if i <= n
         c[i] = a[i] + b[i]
     end
-    return nothing
 end
 
 const T = Float64
@@ -38,20 +23,24 @@ const T = Float64
 # A kernelabstraction task format
 const vector_add_format = XK.KA.Format(
 
-    # the kernelabstraction's kernel
+    # the XK.KA kernel
     vector_add,
-
-    # the number of threads
-    (a, b, c, n) -> (n, 1, 1),
-
-    # the amount of shared memory
-    (a, b, c, n) -> 0,
 
     # the kernel parameters
     (a::AbstractVector{T}) -> XK.Access(XK.ACCESS_MODE_R, a),
     (b::AbstractVector{T}) -> XK.Access(XK.ACCESS_MODE_R, b),
     (c::AbstractVector{T}) -> XK.Access(XK.ACCESS_MODE_W, c),
-    (n::Int)               -> n
+    (n::Int)               -> n,
+
+    # Optional launcher options
+    launcher = XK.KA.Launcher(
+
+        # Optional grid size
+        threads       = (a, b, c, n) -> (n, 1, 1),
+
+        # Optional shared memory size
+        shared_memory = (a, b, c, n) -> 0
+    )
 )
 
 #####################
@@ -60,7 +49,7 @@ const vector_add_format = XK.KA.Format(
 
 # This is just any host virtual memory
 # XKRT/XKBlas will automatically replicate to devices
-n = 4
+n = 32768
 a = rand(T, n)
 b = rand(T, n)
 c = Vector{T}(undef, n)
