@@ -1,6 +1,5 @@
 using XKBlas
 
-# Overload Krylov interfaces
 using Krylov
 import Krylov: FloatOrComplex
 
@@ -9,6 +8,15 @@ function kdotr(n::Integer, x::Vector{T}, y::Vector{T}) where T <: AbstractFloat
     XKBlas.dot(n, x, 1, y, 1, r)
     return r[]
 end
+
+function knrm2(n::Integer, x::Vector{T}) where T <: AbstractFloat
+    # TODO: xkblas do not yet support nrm2, use dot
+    # r = Ref{T}(0)
+    # XKBlas.nrm2(n, x, 1, r)
+    # return r[]
+    return kdotr(n, x, x)
+end
+
 Krylov.kdotr(n::Integer, x::AbstractVector{Complex{T}}, y::AbstractVector{Complex{T}}) where T <: AbstractFloat = kdotr(n, x, y)
 Krylov.kdotr(n::Integer, x::AbstractVector{T}, y::AbstractVector{T}) where T <: AbstractFloat = kdotr(n, x, y)
 
@@ -38,13 +46,6 @@ Krylov.kdot(n::Integer, x::Vector{T}, y::Vector{T}) where T <: BLAS.BlasReal = X
 
 Krylov.kfill!(x::AbstractArray{T}, val::T) where T <: FloatOrComplex = XKBlas.fill(length(x), x, val)
 
-function knrm2(n::Integer, x::Vector{T}) where T <: AbstractFloat
-    # TODO: xkblas do not yet support nrm2, use dot
-    # r = Ref{T}(0)
-    # XKBlas.nrm2(n, x, 1, r)
-    # return r[]
-    return kdotr(n, x, x)
-end
 Krylov.knorm(n::Integer, x::AbstractVector{T}) where T <: FloatOrComplex = knrm2(n, x)
 Krylov.knorm(n::Integer, x::Vector{T}) where T <: BLAS.BlasFloat = knrm2(n, x)
 

@@ -41,32 +41,32 @@ module KA
         const BYTECODE_CACHE_DIR = joinpath(homedir(), ".julia_xkrt_bytecode_cache")
 
         """
-            compute_cache_key(kernel_function::Function, kernel_tt::Type)
+            compute_cache_key(kernel::Function, kernel_args_type::Type)
 
         Compute a unique hash for the kernel function and its argument types.
         This hash is used as the cache key.
         """
-        function compute_cache_key(kernel_function::Function, kernel_tt::Type)
+        function compute_cache_key(kernel::Function, kernel_args_type::Type)
             # Get the method signature
-            methods_list = methods(kernel_function, kernel_tt.parameters)
+            methods_list = methods(kernel, kernel_args_type.parameters)
 
             if isempty(methods_list)
-                error("No methods found for kernel function with type signature $kernel_tt")
+                error("No methods found for kernel function with type signature $kernel_args_type")
             end
 
             method = first(methods_list)
 
             # Get code info - but hash it directly instead of converting to string
-            code_info = code_lowered(kernel_function, kernel_tt.parameters)
+            code_info = code_lowered(kernel, kernel_args_type.parameters)
 
             # Hash based on:
             # 1. Function name
             # 2. Method signature
             # 3. Argument types
             # 4. Code info (detects all code changes)
-            h = hash(nameof(kernel_function))
+            h = hash(nameof(kernel))
             h = hash(method.sig, h)
-            h = hash(kernel_tt, h)
+            h = hash(kernel_args_type, h)
             for ci in code_info
                 code_str = sprint(show, ci.code)    # that is slow, but makes it constant across invocation for the same code
                 h = hash(code_str, h)
@@ -110,14 +110,14 @@ module KA
         end
 
         """
-            save_cached_bytecode(cache_key::String, bytecode::String, bytecode_size::Int, bytecode_name::String)
+            save_cached_bytecode(cache_key::String, bytecode::String, bytecode_size::Int, bytecode_fn_name::String)
 
         Save BYTECODE compilation results to disk cache.
         """
-        function save_cached_bytecode(cache_key::String, bytecode::String, bytecode_size::Int, bytecode_name::String)
+        function save_cached_bytecode(cache_key::String, bytecode::String, bytecode_size::Int, bytecode_fn_name::String)
             path = get_cache_path(cache_key)
             try
-                data = (bytecode=bytecode, bytecode_size=bytecode_size, bytecode_name=bytecode_name)
+                data = (bytecode=bytecode, bytecode_size=bytecode_size, bytecode_fn_name=bytecode_fn_name)
                 serialize(path, data)
                 XK.Logger.debug("Saved BYTECODE to cache: $path")
             catch e
@@ -150,69 +150,60 @@ module KA
     function deinit()
     end
 
-    # Launcher
-    struct LauncherStruct
+    # Mapping types to kernel bytecode
+    mutable struct VersionStruct
 
-        # 1. function to get the grid launch dimensions
-        threads::Union{Function, Nothing}
+        # 1. arguments input types
+        arguments_input_type::Union{Type,Nothing}
 
-        # 2. function to get the amount of shared memory to use
-        shared_memory::Union{Function, Nothing}
+        # 2. arguments return types
+        arguments_return_type::Union{Type,Nothing}
 
-    end
+        # 3. function BYTECODE
+        bytecode::Union{String,Nothing}
 
-    # Format launch configuration
-    function Launcher(;
-        threads::Union{Function, Nothing}=nothing,
-        shared_memory::Union{Function, Nothing}=nothing
-    )
-        return LauncherStruct(threads, shared_memory)
-    end
-
-    # Mutable so it is passed by reference
-    mutable struct FormatStruct
-
-        # 1. The KA function annotated with @kernel
-        kernel_function::Function
-
-        # 2. function BYTECODE
-        bytecode::String
-
-        # 3. function BYTECODE size
+        # 4. function BYTECODE size
         bytecode_size::Int
 
-        # 4. function BYTECODE name
-        bytecode_name::String
+        # 5. function BYTECODE name
+        bytecode_fn_name::Union{String,Nothing}
 
-        # 5. laucher options
-        launcher::LauncherStruct
-
-        # 6. functions telling how parameters of the kernels are accessed
-        access_functions::Tuple{Vararg{Function}}
-
-        # 7. argument types used by each argument function
-        arg_types_list::Vector{Type}
-
-        # 8. return types used by each argument function
-        return_types_list::Vector{Type}
-
-        # 9. Number of access for tasks
-        num_access::Int
-
-        # 10. XKRT task format id
-        fmtid::XK.xkrt_task_format_id_t
-
-        # 11. Cached module
+        # 6. Cached module
         moodule::XK.xkrt_driver_module_t
 
-        # 12. Cached function
+        # 7. Cached function
         fn::XK.xkrt_driver_module_fn_t
+
+        # 8. Kernel cache key
+        cache_key::Union{String,Nothing}
 
     end
 
     # offset in the format struct
-    const FORMAT_STRUCT_MOODULE_OFFSET = fieldoffset(XK.KA.FormatStruct, 11)
-    const FORMAT_STRUCT_FN_OFFSET      = fieldoffset(XK.KA.FormatStruct, 12)
+    const VERSION_STRUCT_MOODULE_OFFSET = fieldoffset(XK.KA.VersionStruct, 6)
+    const VERSION_STRUCT_FN_OFFSET      = fieldoffset(XK.KA.VersionStruct, 7)
+
+    # Mutable so it is passed by reference
+    mutable struct FormatStruct
+
+        # 1. XKRT task format id
+        fmtid::XK.xkrt_task_format_id_t
+
+        # 2. The KA function annotated with @kernel
+        kernel::Function
+
+        # 3. functions telling how arguments of the kernels are accessed
+        arguments::Function
+
+        # 4. function to get the grid launch dimensions
+        threads::Union{Function, Nothing}
+
+        # 5. function to get the amount of shared memory to use
+        shared_memory::Union{Function, Nothing}
+
+        # 6. List of versions
+        versions::Dict{Type,VersionStruct}  # Dict are mutable, so should be passed by ref
+    end
 
     # kernel launcher routine - run by a julia task
     function task_ka_launcher(
@@ -229,36 +220,40 @@ module KA
         # retrieve task arguments
         task_args::Ptr{Int8} = XK.xkrt_task_args(task)
 
-        # retrieve task format
-        # 1. Get the raw C pointer (void*) pointing to the location of fmt_ptr
-        p_p_fmt::Ptr{Ptr{FormatStruct}} = Ptr{Ptr{FormatStruct}}(task_args)
-        fmt_ptr::Ptr{FormatStruct} = unsafe_load(p_p_fmt)
+        # 1. retrieve task format and version
+        # 2. Get the raw C pointer (void*) pointing to the location of fmt_ptr
+        fmt_ptr_ptr::Ptr{Ptr{FormatStruct}} = Ptr{Ptr{FormatStruct}}(task_args)
+        fmt_ptr::Ptr{FormatStruct} = unsafe_load(fmt_ptr_ptr)
         fmt::FormatStruct = unsafe_load(fmt_ptr)
+
+        version_ptr_ptr::Ptr{Ptr{VersionStruct}} = Ptr{Ptr{VersionStruct}}(task_args + sizeof(Ptr{Cvoid}))
+        version_ptr::Ptr{VersionStruct} = unsafe_load(version_ptr_ptr)
+        version::VersionStruct = unsafe_load(version_ptr)
 
         # TODO: need to protect that with a mutex in case multiple tasks uses the same format
         # cached cuda function
-        if fmt.moodule == C_NULL
+        if version.moodule == C_NULL
 
-            @assert fmt.fn == C_NULL
+            @assert version.fn == C_NULL
 
             # compile the bytecode
             driver           = XK.xkrt_device_driver_get(runtime, device)
             device_driver_id = XK.xkrt_device_driver_id_get(runtime, device)
-            bin              = fmt.bytecode
-            binsize          = fmt.bytecode_size
+            bin              = version.bytecode
+            binsize          = version.bytecode_size
             format           = XK.XKRT_DRIVER_MODULE_FORMAT_NATIVE
             moodule          = XK.xkrt_driver_module_load(driver, device_driver_id, bin, binsize, format)
 
             # get executable function
-            fn = XK.xkrt_driver_module_get_fn(driver, moodule, fmt.bytecode_name)
+            fn = XK.xkrt_driver_module_get_fn(driver, moodule, version.bytecode_fn_name)
 
             # save module and fn
-            unsafe_store!(Ptr{XK.xkrt_driver_module_t   }(fmt_ptr + FORMAT_STRUCT_MOODULE_OFFSET), moodule)
-            unsafe_store!(Ptr{XK.xkrt_driver_module_fn_t}(fmt_ptr + FORMAT_STRUCT_FN_OFFSET),      fn)
+            unsafe_store!(Ptr{XK.xkrt_driver_module_t   }(version_ptr + VERSION_STRUCT_MOODULE_OFFSET), moodule)
+            unsafe_store!(Ptr{XK.xkrt_driver_module_fn_t}(version_ptr + VERSION_STRUCT_FN_OFFSET),      fn)
 
-            fmt=unsafe_load(fmt_ptr)
-            @assert fmt.moodule != C_NULL
-            @assert fmt.fn != C_NULL
+            version=unsafe_load(version_ptr)
+            @assert version.moodule != C_NULL
+            @assert version.fn != C_NULL
 
         end
 
@@ -266,7 +261,7 @@ module KA
         # Grid launch #
         ###############
 
-        threads::Ptr{Int8} = task_args + sizeof(Ptr{Cvoid})
+        threads::Ptr{Int8} = task_args + 2*sizeof(Ptr{Cvoid})
         tx::Int = unsafe_load(Ptr{Int}(threads + 0 * sizeof(Int)))
         ty::Int = unsafe_load(Ptr{Int}(threads + 1 * sizeof(Int)))
         tz::Int = unsafe_load(Ptr{Int}(threads + 2 * sizeof(Int)))
@@ -278,11 +273,12 @@ module KA
         gz = ceil(Int, tz / bz)
 
         XK.Logger.debug("threads, blocks, grid: $(tx) $(ty) $(tz) $(bx) $(by) $(bz) $(gx) $(gy) $(gz)")
+
         #################
         # Shared memory #
         #################
 
-        shared_memory_size_ptr::Ptr{Int8} = task_args + sizeof(Ptr{Cvoid}) + 3 * sizeof(Int)
+        shared_memory_size_ptr::Ptr{Int8} = task_args + 2*sizeof(Ptr{Cvoid}) + 3 * sizeof(Int)
         shared_memory_size::Int = unsafe_load(Ptr{Int}(shared_memory_size_ptr))
 
         ###################
@@ -290,13 +286,15 @@ module KA
         ###################
 
         # retrieve args buffer, that is right after the format pointer in task arguments
-        kernel_args::Ptr{Int8} = task_args + sizeof(Ptr{Cvoid}) + 3*sizeof(Int) + 1*sizeof(Int)
+        kernel_args::Ptr{Int8} = task_args + 2*sizeof(Ptr{Cvoid}) + 3*sizeof(Int) + 1*sizeof(Int)
 
         # parse each accesses, and write replica address
         access_id = 0
         offset = JL_CU_CONTEXT_SIZE
-        for return_type in fmt.return_types_list
-            if return_type <: XK.xkrt_access_t
+
+        for i in 1:length(version.arguments_return_type.parameters)
+            T = version.arguments_return_type.parameters[i]
+            if T <: XK.xkrt_access_t
                 device_ptr::Ptr{Cvoid} = XK.xkrt_task_access_replica(task, access_id)
                 kernel_arg::Ptr{Int8}  = kernel_args + offset
                 unsafe_store!(Ptr{Ptr{Cvoid}}(kernel_arg), device_ptr)
@@ -304,7 +302,7 @@ module KA
                 offset += sizeof(Ptr{Cvoid})
             else
                 # nothing to do, the producer thread already copied by value
-                offset += sizeof(return_type)
+                offset += sizeof(T)
             end
         end
 
@@ -317,7 +315,7 @@ module KA
         XK.xkrt_device_kernel_launch(
             runtime, device,
             queue, index,
-            fmt.fn,
+            version.fn,
             gx, gy, gz,
             bx, by, bz,
             shared_memory_size,
@@ -357,122 +355,78 @@ module KA
         return nothing
     end
 
+    ####################
+    # Helper functions #
+    ####################
+
+    function get_arguments_tuple_size(f::Function)
+        return length(methods(f).ms[1].sig.parameters) - 1
+    end
+
+    function get_returned_tuple_size(f::Function)
+        param_methods = methods(f)
+        if isempty(param_methods)
+            XK.Logger.fatal("Function has no methods defined.")
+        end
+        method = param_methods.ms[1]
+        arg_count = method.nargs - 1
+        input_types = ntuple(_ -> Any, arg_count)
+        return_types = Base.return_types(f, input_types)
+        if isempty(return_types) || return_types[1] === Any
+            XK.Logger.fatal("Could not infer a concrete return type for the function.")
+        end
+        return_type = return_types[1]
+        if return_type <: Tuple
+            return length(return_type.parameters)
+        else
+            return return_type === Nothing ? 0 : 1
+        end
+    end
+
     # Create an XK.KA.FormatStruct
     function Format(
-        kernel_function::Function,
-        access_functions::Function...;
-        launcher::LauncherStruct=LauncherStruct(nothing, nothing)
+        kernel::Function,
+        arguments::Function;
+        threads::Function,
+        shared_memory::Function
     )
         # task main entry point
         task_main = @cfunction(task_ka_main, Cvoid, (Ptr{XK.xkrt_runtime_t}, Ptr{XK.xkrt_device_t}, Ptr{XK.xkrt_task_t}))
 
-        #############################################
-        # set task format: the same for all drivers #
-        #############################################
-        name = nameof(kernel_function)
+        ###################
+        # check arguments #
+        ###################
+
+        nargs = get_arguments_tuple_size(arguments)
+        if nargs != get_returned_tuple_size(arguments)
+            XK.Logger.fatal("Format `arguments` is malformed")
+        end
+        if nargs != get_arguments_tuple_size(threads) || get_returned_tuple_size(threads) != 3
+            XK.Logger.fatal("Format `threads` is malformed")
+        end
+        if nargs != get_arguments_tuple_size(shared_memory) || get_returned_tuple_size(shared_memory) != 1
+            XK.Logger.fatal("Format `shared_memory` is malformed")
+        end
+
+        ##############################################
+        # Extract constant information against types #
+        ##############################################
+
+        name = nameof(kernel)
         fmtid = XK.task_format_put("KA.$name")
         for target in instances(XK.xkrt_task_format_target_t)
             XK.task_format_set(fmtid, target, task_main)
         end
 
-        # retrieve arguments types to compile the function,
-        # and return type to count the number of actual accesses and values passed by copy
-        arg_types_list      = []
-        return_types_list   = []
-        for access_function in access_functions
-            m = first(methods(access_function))
-            @assert length(m.sig.parameters) > 1
-            args = m.sig.parameters[2]
-            push!(arg_types_list, args)
-
-            rts = Base.return_types(access_function, (args,))
-            push!(return_types_list, rts[1])
-        end
-
-        # count number of task accesses
-        num_access = count(==(XK.xkrt_access_t), return_types_list)
-
-        XK.Logger.debug("Number of accesses: $(num_access)")
-        XK.Logger.debug("$(arg_types_list)")
-        XK.Logger.debug("$(return_types_list)")
-
-        ##############################################
-        # Compile to bytecode to target CUDA devices #
-        ##############################################
-
-        # Compile to BYTECODE
-        kernel_tt = Tuple{
-            map(
-                T -> (
-                    T <: AbstractVector ? Ptr{eltype(T)} :
-                    # T <: AbstractVector ? CUDA.CuDeviceVector{eltype(T), 1} :
-                    T
-                ),
-                arg_types_list
-            )...
-        }
-        XK.Logger.debug("$(kernel_tt)")
-
-        XK.Logger.warn("TODO: compile on launch instead, and cache by hashing kernel arguments type. It would allow programmers to specify a Format agnostically of types")
-
-        # Try to load from cache
-        XK.Logger.debug("Computing cache key...")
-        cache_key = XK.KA.Cache.compute_cache_key(kernel_function, kernel_tt)
-        XK.Logger.debug("Cache key: $(cache_key)")
-        cached_data = XK.KA.Cache.load_cached_bytecode(cache_key)
-
-        if cached_data !== nothing
-            bytecode = cached_data.bytecode
-            bytecode_size = cached_data.bytecode_size
-            bytecode_name = cached_data.bytecode_name
-        else
-            # Compile to BYTECODE - TODO: do that portably, not only ptx
-            buf = IOBuffer()
-            XK.Logger.debug("Compiling to BYTECODE")
-            CUDA.code_ptx(buf, kernel_function, kernel_tt; raw=false, kernel=true)
-            bytecode = String(take!(buf))
-            bytecode_size = length(bytecode)
-
-            XK.Logger.debug("Compiled to BYTECODE")
-            XK.Logger.debug(bytecode)
-
-            # Regex to find function names
-            regex_func = r"\.entry\s+([a-zA-Z_0-9]+)\("
-
-            # Find all matches and extract the captured name
-            function_names = [m.captures[1] for m in eachmatch(regex_func, bytecode)]
-            XK.Logger.debug("Functions in the BYTECODE: $(function_names)")
-            @assert length(function_names) == 1
-            bytecode_name = String(function_names[1])
-
-            # Save to cache
-            XK.KA.Cache.save_cached_bytecode(cache_key, bytecode, bytecode_size, bytecode_name)
-        end
-        XK.Logger.debug("BYTECODE of name $(bytecode_name) and size $(bytecode_size)")
-
         # return the format
         return  FormatStruct(
-                    kernel_function,            # The Julia function
-                    bytecode,                   # function BYTECODE
-                    bytecode_size,              # function BYTECODE size
-                    bytecode_name,              # function BYTECODE name
-                    launcher,                   # launch parameters (grid size, shared memory...)
-                    access_functions,           # functions telling how parameters of the kernels are accessed
-                    arg_types_list,             # argument types used by each argument function
-                    return_types_list,          # return types used by each argument function
-                    num_access,                 # Number of access for tasks
-                    fmtid,                      # XKRT task format id
-                    C_NULL,                     # Cached module
-                    C_NULL                      # Cached function
+                    fmtid,                              # XKRT task format id
+                    kernel,                             # The Julia function
+                    arguments,                          # Parameters
+                    threads,                            # threads
+                    shared_memory,                      # shared memory
+                    Dict{Type, VersionStruct}()   # versions
                )
-    end
-
-    function Format(
-        kernel_function::Function,
-        launcher::LauncherStruct,
-        access_functions::Function...
-    )
-        return Format(kernel_function, access_functions...; launcher = launcher)
     end
 
     # Spawn a task to the given device, with the given XK.KA format and kernel arguments
@@ -482,9 +436,67 @@ module KA
         kernel_args...
     )
         # TODO: check that argument matches the format arguments more precisely
-        if length(fmt.access_functions) !== length(kernel_args)
-            throw(ErrorException("Arguments do not match the task format accesses"))
+        if get_arguments_tuple_size(fmt.arguments) !== length(kernel_args)
+            XK.Logger.fatal("Arguments do not match the task format accesses")
         end
+
+        #########################################
+        # Compile to bytecode to target devices #
+        #########################################
+
+        # Set arguments type tuple
+        kernel_args_type = Tuple{map(arg -> (typeof(arg) <: AbstractVector ? Ptr{eltype(typeof(arg))} : typeof(arg)), kernel_args)...}
+        XK.Logger.debug("$(kernel_args_type)")
+
+        # retrieve version for these types
+        version = get!(fmt.versions, kernel_args_type) do
+            VersionStruct(
+                nothing,    # arguments input type
+                nothing,    # arguments return type
+                nothing,    # bytecode
+                0,          # bytecode size
+                nothing,    # function name
+                C_NULL,     # module
+                C_NULL,     # function
+                nothing     # cache key
+            )
+        end
+
+        # Try to load from cache
+        if version.cache_key == nothing
+            XK.Logger.debug("Computing cache key...")
+            version.cache_key = XK.KA.Cache.compute_cache_key(fmt.kernel, kernel_args_type)
+            XK.Logger.debug("Cache key: $(version.cache_key)")
+        end
+        cached_data = XK.KA.Cache.load_cached_bytecode(version.cache_key)
+        if cached_data !== nothing
+            version.bytecode         = cached_data.bytecode
+            version.bytecode_size    = cached_data.bytecode_size
+            version.bytecode_fn_name = cached_data.bytecode_fn_name
+        else
+            # Compile to BYTECODE - TODO: do that portably, not only ptx, targetting the passed device type
+            buf = IOBuffer()
+            XK.Logger.debug("Compiling to BYTECODE")
+            CUDA.code_ptx(buf, fmt.kernel, kernel_args_type; raw=false, kernel=true)
+            version.bytecode      = String(take!(buf))
+            version.bytecode_size = length(version.bytecode)
+
+            XK.Logger.debug("Compiled to BYTECODE")
+            XK.Logger.debug(version.bytecode)
+
+            # Regex to find function names
+            regex_func = r"\.entry\s+([a-zA-Z_0-9]+)\("
+
+            # Find all matches and extract the captured name
+            function_names = [m.captures[1] for m in eachmatch(regex_func, version.bytecode)]
+            XK.Logger.debug("Functions in the BYTECODE: $(function_names)")
+            @assert length(function_names) == 1
+            version.bytecode_fn_name = String(function_names[1])
+
+            # Save to cache
+            XK.KA.Cache.save_cached_bytecode(version.cache_key, version.bytecode, version.bytecode_size, version.bytecode_fn_name)
+        end
+        XK.Logger.debug("BYTECODE of name $(version.bytecode_fn_name) and size $(version.bytecode_size)")
 
         ######################################################
         # Set the args buffer for launching the kernel later #
@@ -492,9 +504,10 @@ module KA
 
         #
         # Task arguments are
-        #   [pointer_to_format | tx | ty | tz | shared_memory_size | julia_context | kernel_args...]
+        #   [pointer_to_format | pointer_to_version | tx | ty | tz | shared_memory_size | julia_context | kernel_args...]
         # with
-        #   pointer_to_forma t -> a 'void *' to the FormatStruct
+        #   pointer_to_format  -> a 'void *' to the FormatStruct
+        #   pointer_to_version -> a 'void *' to the VersionStruct
         #   tx, ty, tz         -> the number of threads to launch the kernel
         #   shared_memory_size -> amount of shared memory
         #   julia_context      -> opaque structure of `JL_CU_CONTEXT_SIZE` bytes
@@ -503,58 +516,64 @@ module KA
         #                           - values, for values passed by copy
         #
 
+        # 0. reflect on the 'parameters' function to known which parameters are passed by access or copy
+        version.arguments_input_type = Tuple{map(arg -> typeof(arg), kernel_args)...}
+        version.arguments_return_type = Base.return_types(fmt.arguments, version.arguments_input_type)[1]
+        @assert (version.arguments_return_type <: Tuple)
+
         # 1. compute sizes for each kernel argument
-        kernel_arg_sizes = Vector{Int}(undef, length(kernel_args))
-        for i in 1:length(kernel_args)
-            if fmt.return_types_list[i] <: XK.xkrt_access_t
+        kernel_args_size = Vector{Int}(undef, length(kernel_args))
+        for i in 1:length(version.arguments_return_type.parameters)
+            T = version.arguments_return_type.parameters[i]
+            if T <: XK.xkrt_access_t
                 # we will store a raw pointer (machine pointer size)
-                kernel_arg_sizes[i] = sizeof(Ptr{Cvoid})
+                kernel_args_size[i] = sizeof(Ptr{Cvoid})
             else
                 # store the raw bytes of the value
                 # sizeof should work for typical scalar isbitstype arguments (Int, Float64, etc.)
-                kernel_arg_sizes[i] = sizeof(kernel_args[i])
+                kernel_args_size[i] = sizeof(kernel_args[i])
             end
         end
 
         # 2. allocate contiguous byte buffer
-        total_size = sizeof(Ptr{Cvoid}) + 3*sizeof(Int) + 1*sizeof(Int) + JL_CU_CONTEXT_SIZE + sum(kernel_arg_sizes)
+        total_size = 2*sizeof(Ptr{Cvoid}) + 3*sizeof(Int) + 1*sizeof(Int) + JL_CU_CONTEXT_SIZE + sum(kernel_args_size)
         task_args_buf = Vector{UInt8}(undef, total_size)
         task_args_buf_ptr = Ptr{Int8}(pointer(task_args_buf))
 
-        # 3. copy format ptr
-        fmt_ptr = Base.unsafe_convert(Ptr{Cvoid}, Ref(fmt))
-        unsafe_store!(Ptr{Ptr{Cvoid}}(task_args_buf_ptr), fmt_ptr)
+        # 3. copy format and version ptr
+        unsafe_store!(Ptr{Ptr{Cvoid}}(task_args_buf_ptr + 0*sizeof(Ptr{Cvoid})), Base.unsafe_convert(Ptr{Cvoid}, Ref(fmt)))
+        unsafe_store!(Ptr{Ptr{Cvoid}}(task_args_buf_ptr + 1*sizeof(Ptr{Cvoid})), Base.unsafe_convert(Ptr{Cvoid}, Ref(version)))
 
         # 4. set the number of threads
-        if fmt.launcher.threads != nothing
+        if fmt.threads != nothing
             # given explicitly by the programmer
-            tx, ty, tz = fmt.launcher.threads(kernel_args...)
+            tx, ty, tz = fmt.threads(kernel_args...)
         else
             # not given by the programmer, guess it from accesses
             XK.Logger.fatal("Default launch grid size is not implemented. Please specify a launcher with `threads = (args...) -> (tx, ty, tz) --- the number of threads to use`")
         end
-        threads_ptr = task_args_buf_ptr + sizeof(Ptr{Cvoid})
+        threads_ptr = task_args_buf_ptr + 2*sizeof(Ptr{Cvoid})
         unsafe_store!(Ptr{Int}(threads_ptr + 0*sizeof(Int)), tx)
         unsafe_store!(Ptr{Int}(threads_ptr + 1*sizeof(Int)), ty)
         unsafe_store!(Ptr{Int}(threads_ptr + 2*sizeof(Int)), tz)
 
         # 5. copy shared memory size
-        if fmt.launcher.shared_memory != nothing
-            shared_memory_size = fmt.launcher.shared_memory(kernel_args...)
+        if fmt.shared_memory != nothing
+            shared_memory_size = fmt.shared_memory(kernel_args...)
         else
             shared_memory_size = 0
         end
-        shared_memory_size_ptr = task_args_buf_ptr + sizeof(Ptr{Cvoid})+ 3*sizeof(Int)
+        shared_memory_size_ptr = task_args_buf_ptr + 2*sizeof(Ptr{Cvoid})+ 3*sizeof(Int)
         unsafe_store!(Ptr{Int}(shared_memory_size_ptr), shared_memory_size)
 
         # 6. fill rest of buffer with arguments
         offset = sizeof(Ptr{Cvoid}) + 3*sizeof(Int) + 1*sizeof(Int) + JL_CU_CONTEXT_SIZE
-        for i in 1:length(kernel_args)
-            kernel_arg = Ptr{Int8}(task_args_buf_ptr + offset)
-            kernel_arg_size = kernel_arg_sizes[i]
+        for i in 1:length(version.arguments_return_type.parameters)
+            T = version.arguments_return_type.parameters[i]
+            kernel_arg_dst   = Ptr{Int8}(task_args_buf_ptr + offset)
             kernel_arg_value = kernel_args[i]
-
-            if fmt.return_types_list[i] <: XK.xkrt_access_t
+            kernel_arg_size  = kernel_args_size[i]
+            if T <: XK.xkrt_access_t
                 @assert isa(kernel_arg_value, AbstractArray)
                 @assert kernel_arg_size == sizeof(Ptr{Cvoid})
                 # nothing to do, this space will be filled when the kernel is
@@ -564,9 +583,8 @@ module KA
                 kernel_arg_value_ref = Ref(kernel_arg_value)
                 kernel_arg_value_struct = Base.unsafe_convert(Ptr{typeof(kernel_arg_value)}, kernel_arg_value_ref)
                 kernel_arg_value_i8 = Ptr{Int8}(kernel_arg_value_struct)
-                unsafe_copyto!(kernel_arg, kernel_arg_value_i8, kernel_arg_size)
+                unsafe_copyto!(kernel_arg_dst, kernel_arg_value_i8, kernel_arg_size)
             end
-
             offset += kernel_arg_size
         end
 
@@ -579,13 +597,18 @@ module KA
         ############################################
 
         set_accesses = (accesses) -> begin
-            @assert length(fmt.access_functions) === length(fmt.return_types_list)
-            for i in 1:length(kernel_args)
-                if fmt.return_types_list[i] <: XK.xkrt_access_t
-                    push!(accesses, fmt.access_functions[i](kernel_args[i]))
+            arguments = fmt.arguments(kernel_args...)
+            for i in 1:length(version.arguments_return_type.parameters)
+                T = version.arguments_return_type.parameters[i]
+                if T <: XK.xkrt_access_t
+                    push!(accesses, arguments[i])
                 end
             end
         end
+
+        ##################
+        # spawn the task #
+        ##################
 
         XK.device_async(
             device_global_id,

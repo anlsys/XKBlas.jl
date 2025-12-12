@@ -79,6 +79,10 @@ function host_async(set_accesses::Function, body::Function)
     return device_async(HOST_DEVICE_GLOBAL_ID, body, set_accesses=set_accesses)
 end
 
+@enum ArgumentPassMode begin
+    Value
+end
+
 # Helper constructor for xkrt_access_t
 function Access(
     mode::xkrt_access_mode_t,

@@ -22,7 +22,7 @@ module XKBlas
     # --- High-level wrappers ---
     include("wrappers.jl")
     include("logger.jl")
-    include("ka.jl")
+    include("KA/KA.jl")
     include("threading.jl")
 
     # Init /Deinit xkblas - call when module is used
