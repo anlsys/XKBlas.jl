@@ -7,12 +7,8 @@ const XK = XKBlas
 # Custom Kernel example #
 #########################
 
-# Declare kernel
-using CUDA
-
-# the actual kernel a/b/c are raw pointers
 @XK.KA.kernel function vector_add(a, b, c, n)
-    i = (CUDA.blockIdx().x - 1) * CUDA.blockDim().x + CUDA.threadIdx().x
+    i = @XK.KA.tid
     if i <= n
         c[i] = a[i] + b[i]
     end
@@ -49,7 +45,7 @@ const vector_add_format = XK.KA.Format(
 
 # This is just any host virtual memory
 # XKRT/XKBlas will automatically replicate to devices
-n = 32768
+n = 4
 a = rand(T, n)
 b = rand(T, n)
 c = Vector{T}(undef, n)

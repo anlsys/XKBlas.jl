@@ -39,7 +39,6 @@ module KA
 
         # Cache directory setup
         const BYTECODE_CACHE_DIR = joinpath(homedir(), ".julia_xkrt_bytecode_cache")
-        mkpath(BYTECODE_CACHE_DIR)
 
         """
             compute_cache_key(kernel_function::Function, kernel_tt::Type)
@@ -83,6 +82,7 @@ module KA
         Get the file path for a given cache key.
         """
         function get_cache_path(cache_key::String)
+            mkpath(BYTECODE_CACHE_DIR)
             return joinpath(BYTECODE_CACHE_DIR, "$(cache_key).jls")
         end
 
@@ -413,6 +413,8 @@ module KA
         }
         XK.Logger.debug("$(kernel_tt)")
 
+        XK.Logger.warn("TODO: compile on launch instead, and cache by hashing kernel arguments type. It would allow programmers to specify a Format agnostically of types")
+
         # Try to load from cache
         XK.Logger.debug("Computing cache key...")
         cache_key = XK.KA.Cache.compute_cache_key(kernel_function, kernel_tt)
@@ -525,9 +527,11 @@ module KA
 
         # 4. set the number of threads
         if fmt.launcher.threads != nothing
+            # given explicitly by the programmer
             tx, ty, tz = fmt.launcher.threads(kernel_args...)
         else
-            tx, ty, tz = BLOCK_SIZE, 1, 1
+            # not given by the programmer, guess it from accesses
+            XK.Logger.fatal("Default launch grid size is not implemented. Please specify a launcher with `threads = (args...) -> (tx, ty, tz) --- the number of threads to use`")
         end
         threads_ptr = task_args_buf_ptr + sizeof(Ptr{Cvoid})
         unsafe_store!(Ptr{Int}(threads_ptr + 0*sizeof(Int)), tx)
@@ -598,31 +602,54 @@ module KA
         return XK.KA.device_async(device_global_id, fmt, kernel_args...)
     end
 
-    """
-        @kernel f(args...) = ...
+    # Note: No 'using MacroTools' needed now!
 
-    Wraps a function and ensures it always returns `nothing`.
+    """
+    @KA.tid
+    A macro that expands to the backend-specific index calculation.
+    """
+    macro tid()
+        # The definition for @tid is simple and remains the same
+        return :(
+            (CUDA.blockIdx().x - 1) * CUDA.blockDim().x + CUDA.threadIdx().x
+        )
+    end
+
+    """
+    @KA.kernel function my_kernel(...) ... end
+    A macro that wraps a function definition, adds 'return nothing',
+    and works by manually inspecting the Abstract Syntax Tree (AST).
     """
     macro kernel(ex)
-        # Only works on function definitions
-        if ex.head != :function
-            error("@kernel must be applied to a function definition")
+        # The 'ex' argument is the expression for the function definition.
+
+        # 1. Basic check: Ensure it is a function definition
+        if ex.head !== :function
+            error("@kernel must be applied to a function definition.")
         end
 
-        # Extract the name and body
-        fname = ex.args[1]   # e.g., :(vector_add(a,b,c,n))
-        fbody = ex.args[2]
+        # The structure of a function expression is typically:
+        # ex.args[1]: The function signature (e.g., :(vector_add(a, b, c, n)))
+        # ex.args[2]: The function body (a Block expression)
 
-        # Wrap the body so the function always returns nothing
-        wrapped = quote
-            $(Expr(:function, fname, quote
-                $fbody
-                return nothing
-            end))
+        # 2. Get the function body (which is often a :block expression)
+        func_body = ex.args[2]
+
+        # The function body, 'func_body', is typically an Expr with head :block.
+        # Its contents are in func_body.args.
+        if func_body.head !== :block
+            # This handles very unusual function bodies, but usually, it is :block
+            error("Function body is not a block expression.")
         end
 
-        # Return an expression that assigns the wrapped function to the original name
-        return esc(wrapped)
+        # 3. Add the required 'return nothing' to the function body's arguments.
+        # This is done by pushing the expression :(return nothing) onto the array
+        # of expressions that form the function body.
+        push!(func_body.args, :(return nothing))
+
+        # 4. Reconstruct and return the modified expression.
+        # We use 'esc' to prevent the macro hygiene system from renaming variables.
+        return esc(ex)
     end
 
 end
