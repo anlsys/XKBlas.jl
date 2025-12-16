@@ -16,9 +16,12 @@ include("./overrides.jl")                       # TODO
 
 # Run CG
 cg_tol = 1.0e-6
-n=4
+n=64
+ts=32
 A, y = symmetric_definite(n, T)
 A = SparseMatrixCSR(A)
+
+XKBlas.set_tile_parameter(ts)                   # TODO
 @time begin
     (x, stats) = Krylov.cg(A, y, itmax=5*n)
     XKBlas.memory_coherent_sync(x)              # TODO

@@ -25,9 +25,10 @@ function random_csr_arrays(m::Int, n::Int; density::Float64=0.2, rng=Random.defa
 end
 
 # Example usage
-m = 16 # 16384
-n = m
-density=0.1
+m  = 16 # 16384
+n  = m
+ts = 2
+density=1.0
 rows, cols, values, A = random_csr_arrays(m, n, density=density)
 nnz = length(values)
 
@@ -39,6 +40,8 @@ alpha = T(1.0)
 beta  = T(0.0)
 transA = XKBlas.CblasNoTrans
 format = XKBlas.CblasSparseCSR
+
+XKBlas.set_tile_parameter(ts)
 
 @time begin
     XKBlas.spmv(alpha, transA, m, n, nnz, format, rows, cols, values, X, beta, Y)

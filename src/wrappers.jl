@@ -142,6 +142,11 @@ function Access(
     return Access(mode, Segment(pointer(vec), pointer(vec) + length(vec) * Base.elsize(vec)))
 end
 
+# Set tile parameters for all kernels
+function set_tile_parameter(ts)
+    XKBlas.set_param(ts, 0)
+end
+
 ########################
 # Dispatcher for types #
 ########################
