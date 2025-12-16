@@ -3,8 +3,6 @@
 # that leads to deadlocks in the Julia task scheduler mostly
 module Threading
 
-    using ..KA: XK
-
     const TASK_CHANNEL = Ref{Channel{Any}}()
     const COND_HANDLE  = Ref{Base.AsyncCondition}()
 

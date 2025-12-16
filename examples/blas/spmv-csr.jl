@@ -2,13 +2,15 @@ using Krylov
 
 using LinearAlgebra # norm
 using SparseArrays  # spdiagm
+using SparseMatricesCSR
 
 # Symmetric and positive definite systems.
 function symmetric_definite(n::Int, FC)
-  α = FC <: Complex ? FC(im) : one(FC)
-  A = spdiagm(-1 => α * ones(FC, n-1), 0 => 4 * ones(FC, n), 1 => conj(α) * ones(FC, n-1))
-  b = A * FC[1:n;]
-  return A, b
+    α = FC <: Complex ? FC(im) : one(FC)
+    A_csc = spdiagm(-1 => α * ones(FC, n-1), 0 => 4 * ones(FC, n), 1 => conj(α) * ones(FC, n-1))
+    b = A_csc * FC[1:n;]
+    A_csr = SparseMatrixCSR(A_csc)
+    return A_csr, b
 end
 
 # Run CG

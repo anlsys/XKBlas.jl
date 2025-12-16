@@ -7,6 +7,9 @@ const XK = XKBlas
 # Custom Kernel example #
 #########################
 
+# All of this is type-agnostic, it is instanciated and compiled on-line with passed instances
+
+# vector addition kernel, typ
 @XK.KA.kernel function vector_add(a, b, c, n)
     i = @XK.KA.tid
     if i <= n
@@ -14,9 +17,7 @@ const XK = XKBlas
     end
 end
 
-const T = Float64
-
-# A kernelabstraction task format
+# An XK.KA format
 const vector_add_format = XK.KA.Format(
 
     # the XK.KA kernel
@@ -39,8 +40,10 @@ const vector_add_format = XK.KA.Format(
 # Execution example #
 #####################
 
+const T = Float64
+
 # This is just any host virtual memory
-# XKRT/XKBlas will automatically replicate to devices
+# XKRT automatically replicates to devices
 n = 4
 a = rand(T, n)
 b = rand(T, n)
