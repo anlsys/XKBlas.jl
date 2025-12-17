@@ -1,5 +1,4 @@
 using Base.Libc
-using KernelAbstractions
 using XKBlas
 const XK = XKBlas
 
