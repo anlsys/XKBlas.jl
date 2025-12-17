@@ -1,32 +1,41 @@
 using LinearAlgebra, Random
 using XKBlas
+const XK = XKBlas
 
-# Problem setup
+#################
+# Problem setup #
+#################
+
+# This is host memory, XKRT/XKBlas will replicate to devices
 n = 3 #32768
 m, n, k = n, n, n
 A = [Float32(rand()) for _ in 1:(m*k)]
 B = [Float32(rand()) for _ in 1:(k*n)]
 C = [Float32(0.0)    for _ in 1:(m*n)]
-
-alpha_vec = [Float32(1.0)]
-beta_vec  = [Float32(0.0)]
-
+alpha = Float32(1.0)
+beta  = Float32(0.0)
 lda, ldb, ldc = m, k, m
-
-transA, transB = XKBlas.CblasNoTrans, XKBlas.CblasNoTrans
+transA, transB = XK.CblasNoTrans, XK.CblasNoTrans
 
 @time begin
-    XKBlas.sgemm_async(
+
+    # Run a gemm, it is automatically tiled and distributed to available GPUs
+    # see https://gitlab.inria.fr/xkblas/dev/-/tree/v2.0/
+    XK.gemm_async(
         transA, transB,
         m, n, k,
-        alpha_vec,
+        alpha,
         A, lda,
         B, ldb,
-        beta_vec,
+        beta,
         C, ldc
     )
-    XKBlas.memory_matrix_coherent_async(C, ldc, m, n, sizeof(Float32))
-    XKBlas.sync()
+
+    # Write back to host memory
+    XK.memory_matrix_coherent_async(C, ldc, m, n, sizeof(Float32))
+
+    # wait for completion
+    XK.sync()
 end
 
 # Print XKblas and Julia-native results
