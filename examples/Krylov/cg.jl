@@ -16,7 +16,7 @@ function symmetric_definite(n::Int, T)
     return A_csc, y
 end
 
-include("./overrides.jl")                       # TODO
+include("./overrides.jl")                       # EXTRA LOC FOR XKBLAS (override Julia calls to XKBlas sync versions)
 
 # ----------------------------
 # Command-line arguments
@@ -36,10 +36,10 @@ cg_tol = 1.0e-6
 A, y = symmetric_definite(n, T)
 A = SparseMatrixCSR(A)
 
-XKBlas.set_tile_parameter(ts)                   # TODO
+XKBlas.set_tile_parameter(ts)                   # EXTRA LOC FOR XKBLAS (set kernel tile size parameter)
 @time begin
     (x, stats) = Krylov.cg(A, y, itmax = 5*n)
-    XKBlas.memory_coherent_sync(x)              # TODO
+    XKBlas.memory_coherent_sync(x)              # EXTRA LOC FOR XKBLAS ('sync' mode has no write-back by default)
 end
 
 r = y - A * x
