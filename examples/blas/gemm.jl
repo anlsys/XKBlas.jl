@@ -6,14 +6,16 @@ const XK = XKBlas
 # Problem setup #
 #################
 
+const T = Float32
+
 # This is host memory, XKRT/XKBlas will replicate to devices
 n = 3 #32768
 m, n, k = n, n, n
-A = [Float32(rand()) for _ in 1:(m*k)]
-B = [Float32(rand()) for _ in 1:(k*n)]
-C = [Float32(0.0)    for _ in 1:(m*n)]
-alpha = Float32(1.0)
-beta  = Float32(0.0)
+A = [T(rand()) for _ in 1:(m*k)]
+B = [T(rand()) for _ in 1:(k*n)]
+C = [T(0.0)    for _ in 1:(m*n)]
+alpha = T(1.0)
+beta  = T(0.0)
 lda, ldb, ldc = m, k, m
 transA, transB = XK.CblasNoTrans, XK.CblasNoTrans
 
@@ -32,7 +34,7 @@ transA, transB = XK.CblasNoTrans, XK.CblasNoTrans
     )
 
     # Write back to host memory
-    XK.memory_matrix_coherent_async(C, ldc, m, n, sizeof(Float32))
+    XK.memory_matrix_coherent_async(C, ldc, m, n, sizeof(T))
 
     # wait for completion
     XK.sync()

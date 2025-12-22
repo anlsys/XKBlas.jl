@@ -1,3 +1,20 @@
+# ----------------------------
+# Command-line arguments
+# ----------------------------
+# Usage:
+#   julia script.jl [fname] [n] [ts] [use_xkblas]
+#
+# Defaults:
+#   fname      = cg
+#   n          = 4
+#   ts         = 2
+#   use_xkblas = false
+
+fname      = length(ARGS) >= 1 ?               ARGS[1]  : "cg"
+n          = length(ARGS) >= 2 ? parse(Int,    ARGS[2]) : 4
+ts         = length(ARGS) >= 3 ? parse(Int,    ARGS[3]) : 2
+use_xkblas = length(ARGS) >= 4 ? parse(Bool,   ARGS[4]) : false
+
 using LinearAlgebra # norm
 using SparseArrays  # spdiagm
 using SparseMatricesCSR
@@ -18,30 +35,12 @@ function symmetric_definite(n::Int, T)
     return A_csc, y
 end
 
-# ----------------------------
-# Command-line arguments
-# ----------------------------
-# Usage:
-#   julia script.jl [fname] [n] [ts] [use_xkblas]
-#
-# Defaults:
-#   fname      = cg
-#   n          = 4
-#   ts         = 2
-#   use_xkblas = false
-
-fname      = length(ARGS) >= 1 ?               ARGS[1]  : "cg"
-n          = length(ARGS) >= 2 ? parse(Int,    ARGS[2]) : 4
-ts         = length(ARGS) >= 3 ? parse(Int,    ARGS[3]) : 2
-use_xkblas = length(ARGS) >= 4 ? parse(Bool,   ARGS[4]) : false
-
 tolerance = 1.0e-6
 A, y = symmetric_definite(n, T)
 A = SparseMatrixCSR(A)
 f = getproperty(Krylov, Symbol(fname))
 
 if use_xkblas
-    # EXTRA LOC FOR XKBLAS (override Julia calls to XKBlas sync versions)
     include("./overrides.jl")
     XKBlas.set_tile_parameter(ts)
 else
@@ -57,7 +56,6 @@ end
 
 # Write back
 if use_xkblas
-    # EXTRA LOC FOR XKBLAS (override Julia calls to XKBlas sync versions)
     XKBlas.memory_coherent_sync(x)
 else
     # TODO
