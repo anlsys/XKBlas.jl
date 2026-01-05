@@ -1,10 +1,10 @@
-module XKBlas
+module XKLas
 
     using Libdl
     using Scratch
 
-    XKBlas_pkg = Base.UUID("8d3f9e88-0651-4e8b-8f79-7d9d5f5f9e88")
-    xkblas_dir = get_scratch!(XKBlas_pkg, "xkblas")
+    XKLas_pkg = Base.UUID("8d3f9e88-0651-4e8b-8f79-7d9d5f5f9e88")
+    xkblas_dir = get_scratch!(XKLas_pkg, "xkblas")
 
     @show xkblas_dir
     # --- Load the library handle ---
@@ -28,13 +28,13 @@ module XKBlas
 
     # Init /Deinit xkblas - call when module is used
     function __init__()
-        XKBlas.init()
-        XKBlas.KA.init()
-        XKBlas.Threading.init()
+        XKLas.init()
+        XKLas.KA.init()
+        XKLas.Threading.init()
         function cleanup()
-            XKBlas.KA.deinit()
-            XKBlas.Threading.deinit()
-            XKBlas.deinit()
+            XKLas.KA.deinit()
+            XKLas.Threading.deinit()
+            XKLas.deinit()
         end
         atexit(cleanup)
     end

@@ -2,7 +2,7 @@ using LinearAlgebra
 using Random
 using SparseArrays
 using SparseMatricesCSR
-using XKBlas
+using XKLas
 
 function random_csr_arrays(m::Int, n::Int; density::Float64=0.2, rng=Random.default_rng())
     # Step 1: generate a random sparse CSC matrix with Float64 values
@@ -38,19 +38,19 @@ X = rand(n)
 Y = 0.0 * rand(m)
 alpha = T(1.0)
 beta  = T(0.0)
-transA = XKBlas.CblasNoTrans
-format = XKBlas.CblasSparseCSR
+transA = XKLas.CblasNoTrans
+format = XKLas.CblasSparseCSR
 
-XKBlas.set_tile_parameter(ts)
+XKLas.set_tile_parameter(ts)
 
 @time begin
-    XKBlas.spmv(alpha, transA, m, n, nnz, format, rows, cols, values, X, beta, Y)
+    XKLas.spmv(alpha, transA, m, n, nnz, format, rows, cols, values, X, beta, Y)
 end
 
 if (n <= 64)
     println("A =")
     display(LinearAlgebra.Matrix(A))  # dense view for clarity
     println("X = ", X)
-    println("XKBlas Y = ", Y)
+    println("XKLas Y = ", Y)
     println(" Julia Y = ", A * X)
 end

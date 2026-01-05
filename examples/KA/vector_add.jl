@@ -1,6 +1,6 @@
 using Base.Libc
-using XKBlas
-const XK = XKBlas
+using XKLas
+const XK = XKLas
 
 #########################
 # Custom Kernel example #
@@ -8,7 +8,7 @@ const XK = XKBlas
 
 # All of this is type-agnostic, it is instanciated and compiled on-line with passed instances
 
-# vector addition kernel, typ
+# vector addition kernel, type
 @XK.KA.kernel function vector_add(a, b, c, n)
     i = @XK.KA.tid
     if i <= n

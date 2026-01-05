@@ -1,10 +1,10 @@
-using XKBlas
+using XKLas
 
 # spawn two tasks
 x = 0
 
 # first one sets 'x' to 42
-XKBlas.host_async(
+XKLas.host_async(
     (accesses) -> begin
         push!(accesses, Access(ACCESS_MODE_VW, Segment(0, 64)))
     end,
@@ -14,7 +14,7 @@ XKBlas.host_async(
 )
 
 # second one sets 'x' to 43 - with an intersecting access to set a dependency
-XKBlas.host_async(
+XKLas.host_async(
     set_accesses = (accesses) -> begin
         push!(accesses, Access(ACCESS_MODE_VR, Segment(16, 48)))
     end,
@@ -25,6 +25,6 @@ XKBlas.host_async(
 )
 
 # wait for task execution
-XKBlas.sync()
+XKLas.sync()
 println("x is $x")
 @assert x == 43

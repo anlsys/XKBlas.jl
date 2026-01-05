@@ -19,7 +19,7 @@ using LinearAlgebra # norm
 using SparseArrays  # spdiagm
 using SparseMatricesCSR
 using Krylov
-using XKBlas
+using XKLas
 
 const T = Float64 # (Float64, ComplexF64)
 
@@ -42,7 +42,7 @@ f = getproperty(Krylov, Symbol(fname))
 
 if use_xkblas
     include("./overrides.jl")
-    XKBlas.set_tile_parameter(ts)
+    XKLas.set_tile_parameter(ts)
 else
     # TODO
 end
@@ -56,7 +56,7 @@ end
 
 # Write back
 if use_xkblas
-    XKBlas.memory_coherent_sync(x)
+    XKLas.memory_coherent_sync(x)
 else
     # TODO
 end

@@ -1,4 +1,4 @@
-# build XKBlas with CMake (including XKRT dependency)
+# build XKLas with CMake (including XKRT dependency)
 
 using Pkg
 Pkg.activate(@__DIR__)
@@ -9,7 +9,7 @@ using CUDA
 # using CUDA_SDK_jll    # TODO: enable me when CUDA_SDK_jll is fixed
 using OpenBLAS_jll
 
-XKBlas_pkg = Base.UUID("8d3f9e88-0651-4e8b-8f79-7d9d5f5f9e88")
+XKLas_pkg = Base.UUID("8d3f9e88-0651-4e8b-8f79-7d9d5f5f9e88")
 
 # Configuration from install.sh
 const XKRT_BRANCH   = "master"
@@ -18,14 +18,14 @@ const XKRT_URL = "https://gitlab.inria.fr/xkaapi/dev-v2.git"
 const XKBLAS_URL = "https://gitlab.inria.fr/xkblas/dev.git"
 
 # get scratch directories for installations
-xkrt_install_dir = get_scratch!(XKBlas_pkg, "xkrt")
-xkblas_install_dir = get_scratch!(XKBlas_pkg, "xkblas")
+xkrt_install_dir = get_scratch!(XKLas_pkg, "xkrt")
+xkblas_install_dir = get_scratch!(XKLas_pkg, "xkblas")
 rm(xkrt_install_dir; recursive=true, force=true)
 rm(xkblas_install_dir; recursive=true, force=true)
 
 # get scratch directories for source code
-xkrt_source_dir = get_scratch!(XKBlas_pkg, "xkrt_src")
-xkblas_source_dir = get_scratch!(XKBlas_pkg, "xkblas_src")
+xkrt_source_dir = get_scratch!(XKLas_pkg, "xkrt_src")
+xkblas_source_dir = get_scratch!(XKLas_pkg, "xkblas_src")
 
 # get build directories
 xkrt_build_dir = if length(ARGS) >= 1
@@ -87,15 +87,15 @@ end
 @info "Using XKRT commit: $xkrt_hash"
 
 #######################
-# Clone XKBlas source #
+# Clone XKLas source #
 #######################
 @info "="^60
-@info "Cloning/updating XKBlas source (branch: $XKBLAS_BRANCH)..."
+@info "Cloning/updating XKLas source (branch: $XKBLAS_BRANCH)..."
 @info "="^60
 
 # Check if directory exists and is a valid git repository
 if isdir(xkblas_source_dir) && isdir(joinpath(xkblas_source_dir, ".git"))
-    @info "XKBlas source directory exists, updating..."
+    @info "XKLas source directory exists, updating..."
     try
         repo = LibGit2.GitRepo(xkblas_source_dir)
         try
@@ -118,7 +118,7 @@ else
         @warn "Directory exists but is not a git repository. Removing..."
         rm(xkblas_source_dir; recursive=true, force=true)
     end
-    @info "Cloning XKBlas from $XKBLAS_URL"
+    @info "Cloning XKLas from $XKBLAS_URL"
     LibGit2.clone(XKBLAS_URL, xkblas_source_dir; branch=XKBLAS_BRANCH)
 end
 
@@ -128,7 +128,7 @@ xkblas_hash = let repo = LibGit2.GitRepo(xkblas_source_dir)
     close(repo)
     hash
 end
-@info "Using XKBlas commit: $xkblas_hash"
+@info "Using XKLas commit: $xkblas_hash"
 
 # Use LLVM_full_jll compilers (similar to oneAPI's icpx)
 clang_path = LLVM_full_jll.clang_path
@@ -190,18 +190,18 @@ elseif !isempty(cmake_prefix_path)
     push!(xkrt_cmake_options, "-DCMAKE_PREFIX_PATH=$cmake_prefix_path")
 end
 
-# build and install XKBlas
+# build and install XKLas
 cmake() do cmake_path
     make = "make"  # path to `make`, or find it via `which("make")`
 
     # Configure
     cmd = `$cmake_path -G "Unix Makefiles" $xkrt_cmake_options -S $xkrt_source_dir -B $xkrt_build_dir`
-    @info "Configuring XKBlas with Unix Makefiles..." cmd
+    @info "Configuring XKLas with Unix Makefiles..." cmd
     run(cmd)
 
     # Build and install
     cmd = `$make -j -C $xkrt_build_dir install`
-    @info "Building and installing XKBlas..." cmd
+    @info "Building and installing XKLas..." cmd
     run(cmd)
 end
 
@@ -214,10 +214,10 @@ end
 @info "XKRT installed successfully at: $xkrt_install_dir"
 
 ##################
-# Build XKBlas   #
+# Build XKLas   #
 ##################
 @info "="^60
-@info "Building XKBlas..."
+@info "Building XKLas..."
 @info "="^60
 
 # Update CMAKE_PREFIX_PATH to include XKRT
@@ -260,18 +260,18 @@ if use_cuda
     push!(xkblas_cmake_options, "-DCUDAToolkit_ROOT=$(split(cmake_prefix_path, ':')[1])")
 end
 
-# build and install XKBlas
+# build and install XKLas
 cmake() do cmake_path
     make = "make"  # path to `make`, or find it via `which("make")`
 
     # Configure
     cmd = `$cmake_path -G "Unix Makefiles" $xkblas_cmake_options -S $xkblas_source_dir -B $xkblas_build_dir`
-    @info "Configuring XKBlas with Unix Makefiles..." cmd
+    @info "Configuring XKLas with Unix Makefiles..." cmd
     run(cmd)
 
     # Build and install
     cmd = `$make -j -C $xkblas_build_dir install`
-    @info "Building and installing XKBlas..." cmd
+    @info "Building and installing XKLas..." cmd
     run(cmd)
 end
 
@@ -292,14 +292,14 @@ end
 
 @info "="^60
 @info "Build complete!"
-@info "XKBlas library: $xkblas_lib_path"
+@info "XKLas library: $xkblas_lib_path"
 @info "XKRT library:   $xkrt_lib_path"
 @info "="^60
 
-# tell XKBlas_jll and XKRT_jll to load our libraries instead of the default artifact ones
+# tell XKLas_jll and XKRT_jll to load our libraries instead of the default artifact ones
 set_preferences!(
     joinpath(dirname(@__DIR__), "LocalPreferences.toml"),
-    "XKBlas_jll",
+    "XKLas_jll",
     "libxkblas_path" => xkblas_lib_path;
     force=true,
 )

@@ -1,6 +1,6 @@
-name = "XKBlas"
+name = "XKLas"
 uuid = "8d3f9e88-0651-4e8b-8f79-7d9d5f5f9e88"
-authors = ["Michel <michel@example.com>"]
+authors = ["Romain PEREIRA <rpereira@anl.gov"]
 version = "0.1.0"
 
 [deps]

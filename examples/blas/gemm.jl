@@ -1,6 +1,6 @@
 using LinearAlgebra, Random
-using XKBlas
-const XK = XKBlas
+using XKLas
+const XK = XKLas
 
 #################
 # Problem setup #
@@ -8,7 +8,7 @@ const XK = XKBlas
 
 const T = Float32
 
-# This is host memory, XKRT/XKBlas will replicate to devices
+# This is host memory, XKRT/XKLas will replicate to devices
 n = 3 #32768
 m, n, k = n, n, n
 A = [T(rand()) for _ in 1:(m*k)]
@@ -42,9 +42,9 @@ end
 
 # Print XKblas and Julia-native results
 if (n <= 64)
-    println("XKBlas A = ", reshape(A, m, k))
-    println("XKBlas B = ", reshape(B, k, n))
-    println("XKBlas C = ", reshape(C, m, n))
+    println("XKLas A = ", reshape(A, m, k))
+    println("XKLas B = ", reshape(B, k, n))
+    println("XKLas C = ", reshape(C, m, n))
 
     C_julia = reshape(A, m, k) * reshape(B, k, n)
     println(" Julia C = ", C_julia)

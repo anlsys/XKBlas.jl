@@ -1,9 +1,9 @@
-using XKBlas
+using XKLas
 using Test
 
-@testset "XKBlas.jl" begin
+@testset "XKLas.jl" begin
     # init xkblas
-    XKBlas.init()
+    XKLas.init()
 
     # Problem setup
     n = 128
@@ -17,10 +17,10 @@ using Test
 
     lda, ldb, ldc = m, k, m
 
-    transA, transB = XKBlas.CblasNoTrans, XKBlas.CblasNoTrans
+    transA, transB = XKLas.CblasNoTrans, XKLas.CblasNoTrans
 
-    # Run an XKBlas sequence
-    XKBlas.sgemm_async(
+    # Run an XKLas sequence
+    XKLas.sgemm_async(
         transA, transB,
         m, n, k,
         alpha_vec,
@@ -29,11 +29,11 @@ using Test
         beta_vec,
         C, ldc
     )
-    XKBlas.memory_matrix_coherent_async(C, ldc, m, n, sizeof(Float32))
-    XKBlas.sync()
+    XKLas.memory_matrix_coherent_async(C, ldc, m, n, sizeof(Float32))
+    XKLas.sync()
 
     # TODO: check result
 
     # deinit xkblas
-    XKBlas.deinit()
+    XKLas.deinit()
 end
