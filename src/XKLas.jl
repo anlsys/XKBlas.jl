@@ -9,7 +9,6 @@ module XKLas
     @show xkblas_dir
     # --- Load the library handle ---
     libpath = Libdl.find_library(["libxkblas"], [joinpath(xkblas_dir, "lib")])
-    @show libpath
     if libpath === nothing
         error("libxkblas not found. Make sure the library is built using `deps/build_local.jl`.")
     end
@@ -24,6 +23,7 @@ module XKLas
     include("logger.jl")
     include("threading.jl")
 
+    include("BLAS/BLAS.jl")
     include("KA/KA.jl")
 
     # Init /Deinit xkblas - call when module is used
@@ -38,5 +38,4 @@ module XKLas
         end
         atexit(cleanup)
     end
-
 end

@@ -1,5 +1,4 @@
-using LinearAlgebra, Random
-using XKLas
+using LinearAlgebra, Random, XKLas
 const XK = XKLas
 
 #################
@@ -17,13 +16,13 @@ C = [T(0.0)    for _ in 1:(m*n)]
 alpha = T(1.0)
 beta  = T(0.0)
 lda, ldb, ldc = m, k, m
-transA, transB = XK.CblasNoTrans, XK.CblasNoTrans
+transA, transB = XK.BLAS.NO_TRANS, XK.BLAS.NO_TRANS
 
 @time begin
 
     # Run a gemm, it is automatically tiled and distributed to available GPUs
     # see https://gitlab.inria.fr/xkblas/dev/-/tree/v2.0/
-    XK.gemm_async(
+    XK.BLAS.gemm_async(
         transA, transB,
         m, n, k,
         alpha,

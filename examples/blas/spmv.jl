@@ -38,8 +38,8 @@ X = rand(n)
 Y = 0.0 * rand(m)
 alpha = T(1.0)
 beta  = T(0.0)
-transA = XKLas.CblasNoTrans
-format = XKLas.CblasSparseCSR
+transA = XKLas.BLAS.NO_TRANS
+format = XKLas.BLAS.SPARSE_CSR
 
 XKLas.set_tile_parameter(ts)
 

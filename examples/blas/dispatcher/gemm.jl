@@ -1,5 +1,5 @@
-using LinearAlgebra, Random
-using XKLas
+using LinearAlgebra, Random, XKLas
+const XK = XKLas
 
 TYPE = Float32
 
@@ -15,7 +15,7 @@ beta_vec  = TYPE(0.0)
 
 lda, ldb, ldc = m, k, m
 
-transA, transB = XKLas.CblasNoTrans, XKLas.CblasNoTrans
+transA, transB = XK.NO_TRANS, XK.NO_TRANS
 
 @time begin
     XKLas.gemm_async(
