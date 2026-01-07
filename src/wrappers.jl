@@ -155,12 +155,15 @@ end
 
 memory_coherent_async(A, lda, m, n) = memory_matrix_coherent_async(A, lda, m, n, sizeof(eltype(A)))
 memory_coherent_sync(A, lda, m, n)  = memory_matrix_coherent_async(A, lda, m, n, sizeof(eltype(A)))
-
 memory_coherent_sync(x)             = memory_segment_coherent_async(x, length(x)*sizeof(eltype(x)))
 memory_coherent_async(x)            = memory_segment_coherent_async(x, length(x)*sizeof(eltype(x)))
-
 memory_coherent_async(x, n)         = memory_segment_coherent_async(x, n*sizeof(eltype(x)))
 memory_coherent_sync(x, n)          = memory_segment_coherent_async(x, n*sizeof(eltype(x)))
+
+memory_register(x)      =   register_memory(x, length(x)*sizeof(eltype(x)))
+memory_unregister(x)    = unregister_memory(x, length(x)*sizeof(eltype(x)))
+memory_register(x, n)   =   register_memory(x, n*sizeof(eltype(x)))
+memory_unregister(x, n) = unregister_memory(x, n*sizeof(eltype(x)))
 
 # Export symbols
 for name in names(@__MODULE__; all=true)

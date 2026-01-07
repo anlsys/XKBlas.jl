@@ -17,6 +17,11 @@ const XKBLAS_BRANCH = "v2.0"
 const XKRT_URL = "https://gitlab.inria.fr/xkaapi/dev-v2.git"
 const XKBLAS_URL = "https://gitlab.inria.fr/xkblas/dev.git"
 
+# Build parameters
+const build_type="Release"
+const use_stats="OFF"
+const use_shut_up="ON"
+
 # get scratch directories for installations
 xkrt_install_dir = get_scratch!(XKLas_pkg, "xkrt")
 xkblas_install_dir = get_scratch!(XKLas_pkg, "xkblas")
@@ -174,12 +179,13 @@ xkrt_cmake_options = String[
     "-DCMAKE_C_COMPILER=$clang_path",
     "-DCMAKE_CXX_COMPILER=$clangxx_path",
     "-DCMAKE_LINKER=$lld_path",
-    "-DCMAKE_BUILD_TYPE=Debug",
+    "-DCMAKE_BUILD_TYPE=$build_type",
     "-DCMAKE_INSTALL_PREFIX=$xkrt_install_dir",
     "-DSTRICT=OFF",
-    "-DUSE_STATS=ON",
+    "-DUSE_STATS=$use_stats",
     "-DUSE_JULIA=ON",
-    "-DUSE_CUDA=$(use_cuda ? "on" : "off")"
+    "-DUSE_CUDA=$(use_cuda ? "on" : "off")",
+    "-DUSE_SHUT_UP=$use_shut_up"
 ]
 
 if use_cuda && !isempty(cmake_prefix_path)
@@ -242,7 +248,7 @@ xkblas_cmake_options = String[
     "-DCMAKE_LINKER=$lld_path",
     "-DCMAKE_C_FLAGS=-Wno-error",
     "-DCMAKE_CXX_FLAGS=-Wno-error",
-    "-DCMAKE_BUILD_TYPE=Debug",
+    "-DCMAKE_BUILD_TYPE=$build_type",
     "-DCMAKE_INSTALL_PREFIX=$xkblas_install_dir",
     "-DCMAKE_PREFIX_PATH=$cmake_prefix_path",
     "-DXKRT_DIR=$(joinpath(xkrt_install_dir, "lib", "cmake", "XKRT"))",
