@@ -1,6 +1,5 @@
 using Base.Libc
-using XKLas
-const XK = XKLas
+using XK
 
 #########################
 # Custom Kernel example #

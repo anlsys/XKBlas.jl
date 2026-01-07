@@ -1,6 +1,5 @@
 #
-#   Kernel abstractions built in XKLas
-#   Kernel abstractions built-in XKLas
+#   Kernel abstractions built-in XK
 #   Main differences with KernelAbstractions.jl and others, is:
 #       - passed parameters are raw pointers, not Julia types
 #       - there no bounds check: @inbounds is ignored
@@ -13,8 +12,7 @@ module KA
 
     using CUDA
 
-    import ..XKLas
-    const XK = XKLas
+    import ..XK
 
     # Julia CU context is 16 bytes, ignore them
     const JL_CU_CONTEXT_SIZE = 16
@@ -32,8 +30,7 @@ module KA
 
     module Cache
 
-        import ...XKLas
-        const XK = XKLas
+        import ...XK
 
         using Serialization, SHA
 
@@ -142,11 +139,11 @@ module KA
 
     end
 
-    # Called on XKLas init once
+    # Called on XK init once
     function init()
     end
 
-    # Called on XKLas deinit
+    # Called on XK deinit
     function deinit()
     end
 

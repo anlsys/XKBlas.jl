@@ -2,14 +2,14 @@ using Clang.Generators
 using Clang.LibClang.Clang_jll
 using Scratch
 
-XKLas_pkg = Base.UUID("8d3f9e88-0651-4e8b-8f79-7d9d5f5f9e88")
-xkblas_dir = get_scratch!(XKLas_pkg, "xkblas")
+XK_pkg = Base.UUID("8d3f9e88-0651-4e8b-8f79-7d9d5f5f9e88")
+xkblas_dir = get_scratch!(XK_pkg, "xkblas")
 xkblas_include_dir = joinpath(xkblas_dir, "include")
 
-xkrt_dir = get_scratch!(XKLas_pkg, "xkrt")
+xkrt_dir = get_scratch!(XK_pkg, "xkrt")
 xkrt_include_dir = joinpath(xkrt_dir, "include")
 
-println("Using XKLas headers in $xkblas_include_dir")
+println("Using XK headers in $xkblas_include_dir")
 
 # Load generator options (must include type_map and rename_functions)
 options = load_options(joinpath(@__DIR__, "generator.toml"))

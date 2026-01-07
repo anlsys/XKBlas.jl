@@ -1,5 +1,4 @@
-using XKLas
-const XK = XKLas
+using XK
 
 n=4
 ts=2

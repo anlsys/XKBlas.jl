@@ -1,10 +1,5 @@
-using Krylov
+using Krylov, SparseMatricesCSR, XK
 import Krylov: FloatOrComplex
-
-using XKLas
-const XK = XKLas
-
-using SparseMatricesCSR
 
 function xkdot(n::Integer, x::Vector{T}, y::Vector{T}) where T <: FloatOrComplex
     r = Ref{T}(0)

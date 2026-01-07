@@ -42,10 +42,10 @@ function device_async(
     (AC > 0)                       && (flags |= TASK_FLAG_DEPENDENT)
     (true)                         && (flags |= TASK_FLAG_DEVICE)
 
-    runtime = XKLas.xkrt_runtime_get()
+    runtime = XK.xkrt_runtime_get()
 
     if fmt_or_func isa xkrt_task_format_id_t
-        XKLas.xkrt_task_spawn_generic(
+        XK.xkrt_task_spawn_generic(
             runtime,
             device_global_id,
             flags,
@@ -59,8 +59,8 @@ function device_async(
         fptr = @cfunction(_async_trampoline, Cvoid, (Ptr{Cvoid},))
         args = Ref(fmt_or_func::Function)
         _host_async_refs[fptr] = args  # preserve Ref until trampoline executed
-        XKLas.Logger.fatal("TODO: 2 args here, the function body and user parameter")
-        # XKLas.async_generic_with_format(
+        XK.Logger.fatal("TODO: 2 args here, the function body and user parameter")
+        # XK.async_generic_with_format(
         #     device_global_id,
         #     fmt_or_func::xkrt_task_format_id_t,
         #     flags,
@@ -144,7 +144,7 @@ end
 
 # Set tile parameters for all kernels
 function set_tile_parameter(ts)
-    XKLas.set_param(ts, 0)
+    XK.set_param(ts, 0)
 end
 
 ########################

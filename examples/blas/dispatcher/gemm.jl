@@ -1,5 +1,4 @@
-using LinearAlgebra, Random, XKLas
-const XK = XKLas
+using LinearAlgebra, Random, XK
 
 TYPE = Float32
 
@@ -18,7 +17,7 @@ lda, ldb, ldc = m, k, m
 transA, transB = XK.NO_TRANS, XK.NO_TRANS
 
 @time begin
-    XKLas.gemm_async(
+    XK.gemm_async(
         transA, transB,
         m, n, k,
         alpha_vec,
@@ -27,15 +26,15 @@ transA, transB = XK.NO_TRANS, XK.NO_TRANS
         beta_vec,
         C, ldc
     )
-    XKLas.memory_coherent_async(C, ldc, m, n)
-    XKLas.sync()
+    XK.memory_coherent_async(C, ldc, m, n)
+    XK.sync()
 end
 
 # Print XKblas and Julia-native results
 if (n <= 64)
-    println("XKLas A = ", reshape(A, m, k))
-    println("XKLas B = ", reshape(B, k, n))
-    println("XKLas C = ", reshape(C, m, n))
+    println("XK A = ", reshape(A, m, k))
+    println("XK B = ", reshape(B, k, n))
+    println("XK C = ", reshape(C, m, n))
 
     C_julia = reshape(A, m, k) * reshape(B, k, n)
     println(" Julia C = ", C_julia)

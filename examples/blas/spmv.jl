@@ -1,5 +1,4 @@
-using LinearAlgebra, Random, SparseArrays, SparseMatricesCSR, XKLas
-const XK = XKLas
+using LinearAlgebra, Random, SparseArrays, SparseMatricesCSR, XK
 
 function random_csr_arrays(m::Int, n::Int; density::Float64=0.2, rng=Random.default_rng())
     # Step 1: generate a random sparse CSC matrix with Float64 values
@@ -48,6 +47,6 @@ if (n <= 64)
     println("A =")
     display(LinearAlgebra.Matrix(A))  # dense view for clarity
     println("X = ", X)
-    println("XKLas Y = ", Y)
+    println("XK Y = ", Y)
     println(" Julia Y = ", A * X)
 end

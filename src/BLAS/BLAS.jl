@@ -2,8 +2,7 @@
 
 module BLAS
 
-    import ..XKLas
-    const XK = XKLas
+    import ..XK
 
     # Enums #
 

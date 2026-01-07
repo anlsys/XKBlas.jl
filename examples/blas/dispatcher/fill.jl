@@ -1,5 +1,4 @@
-using LinearAlgebra, Random, XKLas
-const XK = XKLas
+using LinearAlgebra, Random, XK
 
 n = 16
 x = [Float32(0.0) for _ in 1:n]
