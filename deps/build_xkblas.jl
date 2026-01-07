@@ -13,12 +13,12 @@ const use_cuda = "OFF"
 #cmake_prefix_path = ENV["CUDA_PATH"]
 
 const use_sycl = "OFF"
-const use_ze = "OFF"
-const use_ze_sycl_interop = "OFF"
-#cmake_prefix_path = "/usr/include/level_zero"
+const use_ze = "ON"
+const use_ze_sycl_interop = "ON"
+cmake_prefix_path = "/usr/include/level_zero"
 
-const use_hip = "ON"
-cmake_prefix_path = ENV["ROCM_PATH"]
+const use_hip = "OFF"
+# cmake_prefix_path = ENV["ROCM_PATH"]
 
 ############################################################################
 
@@ -34,7 +34,7 @@ XK_pkg = Base.UUID("8d3f9e88-0651-4e8b-8f79-7d9d5f5f9e88")
 
 # Configuration from install.sh
 const XKRT_BRANCH   = "master"
-const XKBLAS_BRANCH = "v2.0-aurora"
+const XKBLAS_BRANCH = "v2.0"
 const XKRT_URL = "https://gitlab.inria.fr/xkaapi/dev-v2.git"
 const XKBLAS_URL = "https://gitlab.inria.fr/xkblas/dev.git"
 
