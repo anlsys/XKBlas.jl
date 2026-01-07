@@ -9,16 +9,16 @@ const build_type="Release"
 const use_stats="OFF"
 const use_shut_up="ON"
 
-const use_cuda = "OFF"
-#cmake_prefix_path = ENV["CUDA_PATH"]
+const use_cuda = "ON"
+cmake_prefix_path = ENV["CUDA_PATH"]
 
 const use_sycl = "OFF"
-const use_ze = "ON"
-const use_ze_sycl_interop = "ON"
-cmake_prefix_path = "/usr/include/level_zero"
+const use_ze = "OFF"
+const use_ze_sycl_interop = "OFF"
+#cmake_prefix_path = "/usr/include/level_zero"
 
 const use_hip = "OFF"
-# cmake_prefix_path = ENV["ROCM_PATH"]
+#cmake_prefix_path = ENV["ROCM_PATH"]
 
 ############################################################################
 

@@ -4,6 +4,17 @@ module BLAS
 
     import ..XK
 
+    # Routines helper #
+    memory_register(x::AbstractVector, n)   = XK.register_memory(x, n*sizeof(eltype(x)))
+    memory_register(x::AbstractVector)      = XK.BLAS.memory_register(x, length(x))
+    memory_register(A::AbstractMatrix)      = XK.register_memory(pointer(A), sizeof(A))
+
+    memory_unregister(x::AbstractVector)    = unregister_memory(x, length(x)*sizeof(eltype(x)))
+    memory_unregister(x::AbstractVector, n) = unregister_memory(x, n*sizeof(eltype(x)))
+    memory_unregister(x::AbstractMatrix)    = XK.register_memory(pointer(A), sizeof(A))
+
+    set_tile_size(ts::Int) = XK.set_tile_parameter(ts)
+
     # Enums #
 
     const ROW_MAJOR = XK.CblasRowMajor
@@ -80,9 +91,9 @@ module BLAS
     gemm_sync( transA, transB, m, n, k, alpha::Float32,    A, lda, B, ldb, beta::Float32,    C, ldc)  = XK.sgemm_sync( transA, transB, m, n, k, Ref(alpha), A, lda, B, ldb, Ref(beta), C, ldc)
     gemm_sync( transA, transB, m, n, k, alpha::Float64,    A, lda, B, ldb, beta::Float64,    C, ldc)  = XK.dgemm_sync( transA, transB, m, n, k, Ref(alpha), A, lda, B, ldb, Ref(beta), C, ldc)
 
-    gemm(      transA, transB, alpha, A::AbstractMatrix, B::AbstractMatrix, beta, C::AbstractMatrix)  = XK.gemm(transA, transB, size(C, 1), size(C, 2), size(A, 2), alpha, pointer(A), stride(A, 2), pointer(B), stride(B, 2), beta, pointer(C), stride(C, 2))
-    gemm_async(transA, transB, alpha, A::AbstractMatrix, B::AbstractMatrix, beta, C::AbstractMatrix)  = XK.gemm(transA, transB, size(C, 1), size(C, 2), size(A, 2), alpha, pointer(A), stride(A, 2), pointer(B), stride(B, 2), beta, pointer(C), stride(C, 2))
-    gemm_sync( transA, transB, alpha, A::AbstractMatrix, B::AbstractMatrix, beta, C::AbstractMatrix)  = XK.gemm(transA, transB, size(C, 1), size(C, 2), size(A, 2), alpha, pointer(A), stride(A, 2), pointer(B), stride(B, 2), beta, pointer(C), stride(C, 2))
+    gemm(      transA, transB, alpha, A::AbstractMatrix, B::AbstractMatrix, beta, C::AbstractMatrix)  = XK.BLAS.gemm(transA, transB, size(C, 1), size(C, 2), size(A, 2), alpha, pointer(A), stride(A, 2), pointer(B), stride(B, 2), beta, pointer(C), stride(C, 2))
+    gemm_async(transA, transB, alpha, A::AbstractMatrix, B::AbstractMatrix, beta, C::AbstractMatrix)  = XK.BLAS.gemm(transA, transB, size(C, 1), size(C, 2), size(A, 2), alpha, pointer(A), stride(A, 2), pointer(B), stride(B, 2), beta, pointer(C), stride(C, 2))
+    gemm_sync( transA, transB, alpha, A::AbstractMatrix, B::AbstractMatrix, beta, C::AbstractMatrix)  = XK.BLAS.gemm(transA, transB, size(C, 1), size(C, 2), size(A, 2), alpha, pointer(A), stride(A, 2), pointer(B), stride(B, 2), beta, pointer(C), stride(C, 2))
 
     herk(      uplo, trans, n, k, alpha::ComplexF32, A, lda, beta::ComplexF32, C, ldc)  = XK.cherk(      uplo, transA, transB, n, k, Ref(alpha), A, lda, B, ldb, Ref(beta), C, ldc)
     herk(      uplo, trans, n, k, alpha::ComplexF64, A, lda, beta::ComplexF64, C, ldc)  = XK.zherk(      uplo, transA, transB, n, k, Ref(alpha), A, lda, B, ldb, Ref(beta), C, ldc)

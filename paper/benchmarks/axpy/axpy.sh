@@ -8,7 +8,7 @@ for ngpu in 1 2 4 8 ; do
             export HIP_VISIBLE_DEVICES=0
             ;;
         2)
-            export HIP_VISIBLE_DEVICES=0,2
+            export HIP_VISIBLE_DEVICES=0,4
             ;;
         4)
             export HIP_VISIBLE_DEVICES=0,2,4,6
