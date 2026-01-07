@@ -26,7 +26,4 @@ y = Vector{T}(undef, n)
 XK.BLAS.ext.fill(n, x, 1.0)
 XK.BLAS.ext.fill(n, y, 0.5)
 XK.BLAS.axpy(n, alpha, x, 1, y, 1)
-
-println(alpha)
-println(x)
 println(y)

@@ -3,6 +3,7 @@
 This directory contains scripts to build XKBlas and its dependency XKRT (xkrt) from source.
 
 ## TLDR;
+- Update the `build_xkblas.jl` script header variables (to enable cuda, hip or ze)
 - Run `julia --project=. -e 'using Pkg; Pkg.instantiate(); include("build_local.jl")'`
 
 ## Overview

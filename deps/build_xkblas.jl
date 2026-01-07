@@ -13,9 +13,12 @@ const use_cuda = "OFF"
 #cmake_prefix_path = ENV["CUDA_PATH"]
 
 const use_sycl = "OFF"
-const use_ze = "ON"
-const use_ze_sycl_interop = "ON"
-cmake_prefix_path = "/usr/include/level_zero"
+const use_ze = "OFF"
+const use_ze_sycl_interop = "OFF"
+#cmake_prefix_path = "/usr/include/level_zero"
+
+const use_hip = "ON"
+cmake_prefix_path = ENV["ROCM_PATH"]
 
 ############################################################################
 
@@ -188,6 +191,7 @@ xkrt_cmake_options = String[
     "-DUSE_STATS=$use_stats",
     "-DUSE_JULIA=ON",
     "-DUSE_CUDA=$use_cuda",
+    "-DUSE_HIP=$use_hip",
     "-DUSE_SYCL=$use_sycl",
     "-DUSE_ZE=$use_ze",
     "-DUSE_ZE_SYCL_INTEROP=$use_ze_sycl_interop",
@@ -237,7 +241,8 @@ xkblas_cmake_options = String[
     "-DSTRICT=OFF",
     "-DUSE_CUDA=$use_cuda",
     "-DUSE_CUBLAS=$use_cuda",
-    "-DUSE_CUSPARSE=$use_cuda",
+    "-DUSE_HIP=$use_hip",
+    "-DUSE_HIPBLAS=$use_hip",
     "-DUSE_SYCL=$use_sycl",
     "-DUSE_ZE=$use_ze",
     "-DUSE_CBLAS=off",    # OpenBLAS_jll doesn't include lapacke.h needed for tests
