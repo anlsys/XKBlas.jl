@@ -1,5 +1,4 @@
-using LinearAlgebra, Random, XKLas
-const XK = XKLas
+using LinearAlgebra, Random, XK
 
 # ----------------------------
 # Command-line arguments

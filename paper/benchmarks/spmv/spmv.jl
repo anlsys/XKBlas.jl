@@ -1,5 +1,4 @@
-using LinearAlgebra, Random, SparseArrays, SparseMatricesCSR, XKLas
-const XK = XKLas
+using LinearAlgebra, Random, SparseArrays, SparseMatricesCSR, XK
 
 function random_csr_arrays(m::Int, n::Int; density::Float64=0.2, rng=Random.default_rng())
     # Step 1: generate a random sparse CSC matrix with Float64 values
