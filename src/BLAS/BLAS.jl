@@ -4,7 +4,10 @@ module BLAS
 
     import ..XK
 
-    # Routines helper #
+    # Tile size parameter helper #
+    set_tile_size(ts::Int) = XK.set_tile_parameter(ts)
+
+    # Memory Routines helper #
     memory_register(x::AbstractVector, n)   = XK.register_memory(x, n*sizeof(eltype(x)))
     memory_register(x::AbstractVector)      = XK.BLAS.memory_register(x, length(x))
     memory_register(A::AbstractMatrix)      = XK.register_memory(pointer(A), sizeof(A))
@@ -13,7 +16,13 @@ module BLAS
     memory_unregister(x::AbstractVector, n) = unregister_memory(x, n*sizeof(eltype(x)))
     memory_unregister(x::AbstractMatrix)    = XK.register_memory(pointer(A), sizeof(A))
 
-    set_tile_size(ts::Int) = XK.set_tile_parameter(ts)
+    memory_coherent_async(x::AbstractVector)    = XK.memory_segment_coherent_async(x, length(x)*sizeof(eltype(x)))
+    memory_coherent_async(x::AbstractVector, n) = XK.memory_segment_coherent_async(x, n*sizeof(eltype(x)))
+    memory_coherent_async(A::AbstractMatrix)    = XK.BLAS.memory_coherent_async(pointer(A), stride(A, 2), size(A, 1), size(A, 2))
+
+    memory_coherent_sync(x::AbstractVector)     = XK.memory_segment_coherent_async(x, length(x)*sizeof(eltype(x)))
+    memory_coherent_sync(x::AbstractVector, n)  = XK.memory_segment_coherent_async(x, n*sizeof(eltype(x)))
+    memory_coherent_sync(A::AbstractMatrix)     = XK.BLAS.memory_coherent_async(pointer(A), stride(A, 2), size(A, 1), size(A, 2))
 
     # Enums #
 

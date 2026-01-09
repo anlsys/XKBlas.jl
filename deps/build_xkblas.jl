@@ -5,8 +5,8 @@
 # You may want to modify it for your specific system
 #
 
-const XKRT_BRANCH   = "master"
-const XKBLAS_BRANCH = "v2.0-types"
+const XKRT_BRANCH   = "task-malloc-free"
+const XKBLAS_BRANCH = "v2.0-task-new"
 
 const build_type="Debug"
 const use_stats="ON"
