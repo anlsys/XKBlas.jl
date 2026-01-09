@@ -5,9 +5,12 @@
 # You may want to modify it for your specific system
 #
 
-const build_type="Release"
-const use_stats="OFF"
-const use_shut_up="ON"
+const XKRT_BRANCH   = "master"
+const XKBLAS_BRANCH = "v2.0-types"
+
+const build_type="Debug"
+const use_stats="ON"
+const use_shut_up="OFF"
 
 const use_cuda = "ON"
 cmake_prefix_path = ENV["CUDA_PATH"]
@@ -33,8 +36,6 @@ using Scratch, Preferences, CMake_jll, LibGit2
 XK_pkg = Base.UUID("8d3f9e88-0651-4e8b-8f79-7d9d5f5f9e88")
 
 # Configuration from install.sh
-const XKRT_BRANCH   = "master"
-const XKBLAS_BRANCH = "v2.0"
 const XKRT_URL = "https://gitlab.inria.fr/xkaapi/dev-v2.git"
 const XKBLAS_URL = "https://gitlab.inria.fr/xkblas/dev.git"
 

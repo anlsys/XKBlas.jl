@@ -27,10 +27,10 @@ XK.BLAS.ext.fill(n, x, 1.0)
 XK.BLAS.ext.fill(n, y, 1.0)
 
 # Pin memory
-XK.memory_register(x)
-XK.memory_register(y)
+XK.BLAS.memory_register(x)
+XK.BLAS.memory_register(y)
 
-for i in 1:16
+for i in 1:32
     @time begin
         XK.BLAS.axpy(n, alpha, x, 1, y, 1)
     end

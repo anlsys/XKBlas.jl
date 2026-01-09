@@ -29,9 +29,16 @@ end
 n       = length(ARGS) >= 1 ? parse(Int,     ARGS[1]) : 4
 density = length(ARGS) >= 2 ? parse(Float64, ARGS[2]) : 1.0
 
-m  = n
+# Set tile size parameter
+m = n
+ngpus = XK.get_ngpus()
+ts = div(n, ngpus)
+println(ts)
+
+# generate matrix
 rows, cols, values, A = random_csr_arrays(m, n, density=density)
 nnz = length(values)
+println("nnz=$nnz")
 
 const T = eltype(values)
 
@@ -42,9 +49,11 @@ beta  = T(0.0)
 transA = XK.BLAS.NO_TRANS
 format = XK.BLAS.SPARSE_CSR
 
-# Set tile size parameter
-ngpus = XK.get_ngpus()
-ts = div(n, ngpus)
+# TODO: for large size matrices, the NVIDIA preprocess fails. I believe there
+# is an issue in cuSparse if nnz>INT_MAX. As a work around, tile the matrix in
+# smaller chunks
+#ts = n/32
+
 XK.set_tile_parameter(ts)
 
 for i in 1:16

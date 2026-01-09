@@ -1,0 +1,14 @@
+ Row │ group     name            nrows   ncols   nnz       structural_rank  numerical_symmetry  positive_definite
+─────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   3 │ Janna    Queen_4147     4147110  4147110  316548962          4147110                 1.0     true
+   1 │ Boeing   pwtk            217918   217918   11524432           217918                 1.0     true
+   1 │ Nasa     nasasrb          54870    54870    2677324            54870                 1.0     true
+   1 │ Sinclair 3Dspectralwave  680943   680943   30290827           680943                 1.0     false
+   1 │ Boeing   pct20stif        52329    52329    2698463            52329                 1.0     false
+
+
+Queen_4147      -> cg
+pwtk            -> cg
+nasasrb         -> cg
+pct20stif       -> minres
+3Dspectralwave  -> gmres
