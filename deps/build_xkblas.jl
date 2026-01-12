@@ -8,9 +8,9 @@
 const XKRT_BRANCH   = "task-malloc-free"
 const XKBLAS_BRANCH = "v2.0-task-new"
 
-const build_type="Debug"
-const use_stats="ON"
-const use_shut_up="OFF"
+const build_type="Release"
+const use_stats="OFF"
+const use_shut_up="ON"
 
 const use_cuda = "ON"
 cmake_prefix_path = ENV["CUDA_PATH"]

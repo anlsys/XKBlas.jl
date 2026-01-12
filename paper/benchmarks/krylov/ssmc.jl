@@ -27,7 +27,8 @@ fname      = length(ARGS) >= 1 ?               ARGS[1]  : "cg"
 matrix     = length(ARGS) >= 2 ?               ARGS[2]  : "bcsstk02"
 ts         = length(ARGS) >= 3 ? parse(Int,    ARGS[3]) : 8192
 use_xkblas = length(ARGS) >= 4 ? parse(Bool,   ARGS[4]) : false
-iter       = length(ARGS) >= 5 ? parse(Int,   ARGS[5]) : 5
+iter       = length(ARGS) >= 5 ? parse(Int,    ARGS[5]) : 5
+itermax    = length(ARGS) >= 6 ? parse(Int,    ARGS[6]) : 10000
 println("Running fname=$(fname) on matrix $(matrix)")
 println("To change parameters, run as `julia script.jl [solver:String] [matrix-name:String] [tiles-size:Int] [use-xkblas:Boolean] [iter:Int]`")
 
@@ -62,13 +63,13 @@ for i in 1:iter
 
         if use_xkblas
             # With XKBlas, directly use host memory. Ask for CPU write back explicitly
-            (x, stats) = solver(A, y, itmax = 5*n)
+            (x, stats) = solver(A, y, itmax = itermax)
             XK.BLAS.memory_coherent_sync(x) # TODO: overload krylov solver to automatically do that
         else
             # With CUDA, move memory synchronously first, pass GPU objects to Krylov, and write back
             A_gpu = CuSparseMatrixCSR(A)
             y_gpu = CuVector(y)
-            (x_gpu, stats) = solver(A_gpu, y_gpu, itmax = 5*n)
+            (x_gpu, stats) = solver(A_gpu, y_gpu, itmax = itermax)
             x = Vector{Float64}(undef, n)
             copyto!(x, x_gpu)
         end
