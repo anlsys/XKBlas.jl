@@ -722,11 +722,21 @@ println("To change parameters, run as `julia script.jl [solver:String] [matrix-n
 if mattype == 0
     A = generate_3d_poisson_csr(matsize)
 elseif mattype == 1
-    A = generate_3d_fem_elasticity_csr(matsize, order=4)
-elseif mattype == 2
     #A = generate_3d_maxwell_csr(matsize, formulation=:vector_wave, frequency=10e9)
     A = generate_3d_maxwell_csr(matsize, formulation=:edge_element, frequency=10e9)
+elseif mattype == 2
+    A = generate_3d_fem_elasticity_csr(matsize, order=4)
 end
+
+# Plot matrices to file
+if true
+    println("EXPORTING MATRIX TO IMAGE")
+    using Plots
+    p = spy(A, markersize=1, title="Nonzero pattern")
+    savefig(p, "nonzero_pattern.png")
+    exit()
+end
+
 A = SparseMatrixCSR(A)
 
 @assert size(A, 1) == size(A, 2)
@@ -750,7 +760,7 @@ else
     @assert CUDA.functional()
 end
 
-itmax_value = 5000
+itmax_value = 500
 
 # Run
 for i in 1:iter
@@ -763,5 +773,7 @@ for i in 1:iter
         y_gpu = CuVector(y)
         (x_gpu, stats) = solver(A_gpu, y_gpu, itmax = itmax_value)
     end
+
     println(stats)
+
 end
