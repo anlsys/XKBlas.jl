@@ -729,7 +729,7 @@ elseif mattype == 2
 end
 
 # Plot matrices to file
-if true
+if false
     println("EXPORTING MATRIX TO IMAGE")
     using Plots
     p = spy(A, markersize=1, title="Nonzero pattern")
