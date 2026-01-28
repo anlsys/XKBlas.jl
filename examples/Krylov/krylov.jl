@@ -50,23 +50,24 @@ end
 println("Running fname=$(fname), with n=$(n) of tile size ts=$(ts) $(use_xkblas ? "" : "not") using XKBLAS")
 
 # Run
+xk_y = XKVector(y)
 @time begin
-    (x, stats) = f(A, y, itmax = 5*n)
+    (xk_x, stats) = f(A, xk_y, itmax = 5*n)
 end
 
 # Write back
 if use_xkblas
-    XK.memory_coherent_sync(x)
+    XK.memory_coherent_sync(xk_x.data)
 else
     # TODO
 end
 
 # Checking result
-r = y - A * x
-println("       x is $(x)")
-println("       y is $(y)")
+r = xk_y.data - A * xk_x.data
+println("       x is $(x.data)")
+println("       y is $(y.data)")
 println("residual is $(r)")
 
-resid = norm(r) / norm(y)
+resid = norm(r)
 @assert resid ≤ tolerance "Failure"
 println("Success")
