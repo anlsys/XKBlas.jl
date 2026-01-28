@@ -21,6 +21,7 @@ module XK
     include("bindings.jl")
 
     # --- High-level wrappers ---
+    include("xkarrays.jl")
     include("wrappers.jl")
     include("logger.jl")
     include("threading.jl")
