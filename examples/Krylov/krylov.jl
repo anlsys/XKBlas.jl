@@ -40,32 +40,40 @@ A, y = symmetric_definite(n, T)
 A = SparseMatrixCSR(A)
 f = getproperty(Krylov, Symbol(fname))
 
+# If using XKBlas
 if use_xkblas
+    # redefine krylov_utils.jl API with XKVector/XKMatrix
     include("./overrides.jl")
+
+    # use them types to dispatch on XK.XBLAS routines
+    A = XKSparseMatrixCSR(A)
+    y = XKVector(y)
+
+    # set tile parameter
     XK.set_tile_parameter(ts)
-else
-    # TODO
 end
 
 println("Running fname=$(fname), with n=$(n) of tile size ts=$(ts) $(use_xkblas ? "" : "not") using XKBLAS")
 
 # Run
-xk_y = XKVector(y)
 @time begin
-    (xk_x, stats) = f(A, xk_y, itmax = 5*n)
+    (x, stats) = f(A, y, itmax = 5*n)
 end
 
 # Write back
 if use_xkblas
-    XK.memory_coherent_sync(xk_x.data)
-else
-    # TODO
+    XK.memory_coherent_sync(x)
 end
 
+print(stats)
+println(typeof(x))
+println(typeof(y))
+println(typeof(A))
+
 # Checking result
-r = xk_y.data - A * xk_x.data
-println("       x is $(x.data)")
-println("       y is $(y.data)")
+r = y - A * x
+println("       x is $(x)")
+println("       y is $(y)")
 println("residual is $(r)")
 
 resid = norm(r)

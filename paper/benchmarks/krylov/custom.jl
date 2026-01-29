@@ -737,7 +737,17 @@ if false
     exit()
 end
 
-A = SparseMatrixCSR(A)
+A64 = SparseMatrixCSR(A) # builds with Int64
+nzval    = A64.nzval
+rowptr32 = Int32.(A64.rowptr)
+colval32 = Int32.(A64.colval)
+A = SparseMatrixCSR{1}(
+        size(A64,1),
+        size(A64,2),
+        rowptr32,
+        colval32,
+        nzval
+    )
 
 @assert size(A, 1) == size(A, 2)
 n = size(A, 1)

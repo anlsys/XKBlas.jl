@@ -127,10 +127,10 @@ function Access(
     return access_ref[]
 end
 
-# Access Types and regions
-const Handle  = xkrt_handle_t;
-const Segment = xkrt_segment_t;
-const Matrix  = xkrt_matrix_t;
+# # Access Types and regions
+# const Handle  = xkrt_handle_t;
+# const Segment = xkrt_segment_t;
+# const Matrix  = xkrt_matrix_t;
 
 # Wrappers
 function Access(
@@ -139,7 +139,7 @@ function Access(
     scope::Union{xkrt_access_scope_t, Nothing}=nothing,
     concurrency::Union{xkrt_access_concurrency_t, Nothing}=nothing
 )
-    return Access(mode, Segment(pointer(vec), pointer(vec) + length(vec) * Base.elsize(vec)))
+    return Access(mode, xkrt_segment_t(pointer(vec), pointer(vec) + length(vec) * Base.elsize(vec)))
 end
 
 # Set tile parameters for all kernels
