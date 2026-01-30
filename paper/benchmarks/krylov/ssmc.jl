@@ -1,7 +1,6 @@
 # ----------------------------
 # Command-line arguments
-# -----------------------o-)---
-                           )
+# ----------------------------
 using LinearAlgebra, SparseArrays, SparseMatricesCSR
 using Krylov
 using SuiteSparseMatrixCollection, MatrixMarket
