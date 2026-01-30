@@ -36,18 +36,38 @@ function symmetric_definite(n::Int, T)
 end
 
 tolerance = 1.0e-6
-A, y = symmetric_definite(n, T)
-A = SparseMatrixCSR(A)
+A_csc, y_cpu = symmetric_definite(n, T)
+A_csr = SparseMatrixCSR(A_csc)
 f = getproperty(Krylov, Symbol(fname))
 
+# If using XKBlas
 if use_xkblas
-    include("./overrides.jl")
+
+    using XK
+
+    # set tile parameter
     XK.set_tile_parameter(ts)
+
+    # Use drop-in replacement of CPU types
+    # This overrides Krylov.jl original CPU routines dispatcher.
+    # include("./krylov-utils-overrides.jl")
+
+    # Use XK-types replacement.
+    # This define krylov_utils.jl API for XKVector/XKMatrix
+    include("./krylov-utils-xk.jl")
+    A = XKSparseMatrixCSR(A_csr)
+    y = XKVector(y_cpu)
 else
-    # TODO
+    A = A_csr
+    y = y_cpu
 end
 
 println("Running fname=$(fname), with n=$(n) of tile size ts=$(ts) $(use_xkblas ? "" : "not") using XKBLAS")
+
+println("A=")
+print(A)
+println("y=")
+print(y)
 
 # Run
 @time begin
@@ -57,9 +77,12 @@ end
 # Write back
 if use_xkblas
     XK.memory_coherent_sync(x)
-else
-    # TODO
 end
+
+print(stats)
+println(typeof(x))
+println(typeof(y))
+println(typeof(A))
 
 # Checking result
 r = y - A * x
@@ -67,6 +90,6 @@ println("       x is $(x)")
 println("       y is $(y)")
 println("residual is $(r)")
 
-resid = norm(r) / norm(y)
+resid = norm(r)
 @assert resid ≤ tolerance "Failure"
 println("Success")

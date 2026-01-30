@@ -1,6 +1,11 @@
 using LinearAlgebra, SparseArrays, SparseMatricesCSR
 using Krylov
 
+"""
+The three following generators (generate_3d_poisson_csr,
+generate_3d_maxwell_csr, generate_3d_fem_elasticity_csr) were made with Claude
+LLM Sonnet 4.5.
+"""
 
 """
     generate_3d_fem_elasticity_csr(target_bytes::Int; order::Int=3, E::Float64=1e6, ν::Float64=0.3)
@@ -715,7 +720,7 @@ use_xkblas = length(ARGS) >= 4 ? parse(Bool,  ARGS[4]) : false
 iter       = length(ARGS) >= 5 ? parse(Int,   ARGS[5]) : 5
 mattype    = length(ARGS) >= 6 ? parse(Int,   ARGS[6]) : 0
 println("Running fname=$(fname)")
-println("To change parameters, run as `julia script.jl [solver:String] [matrix-name:String] [tiles-size:Int] [use-xkblas:Boolean] [iter:Int] [matType:Int]`")
+println("To change parameters, run as `julia script.jl [solver:String] [matrix-size:Int] [tiles-size:Int] [use-xkblas:Boolean] [iter:Int] [matType:Int]`")
 
 
 # Get matrix
@@ -728,21 +733,89 @@ elseif mattype == 2
     A = generate_3d_fem_elasticity_csr(matsize, order=4)
 end
 
+@assert size(A, 1) == size(A, 2)
+n = size(A, 1)
+println("Matrix loaded of size n=$(n)")
+
 # Plot matrices to file
-if true
+if false
     println("EXPORTING MATRIX TO IMAGE")
-    using Plots
-    p = spy(A, markersize=1, title="Nonzero pattern")
-    savefig(p, "nonzero_pattern.png")
+    using Images
+    using SparseArrays
+
+    function sparsity_thumbnail_csc(A::SparseMatrixCSC; H=2000, W=2000)
+        m, n = size(A)
+        scale_i = H / m
+        scale_j = W / n
+        img = trues(H, W)
+
+        @inbounds for col in 1:n
+            pj = Int(clamp(floor(Int, col * scale_j) + 1, 1, W))
+            for ptr in A.colptr[col]:(A.colptr[col+1]-1)
+                row = A.rowval[ptr]
+                pi = Int(clamp(floor(Int, row * scale_i) + 1, 1, H))
+                img[pi, pj] = false
+            end
+        end
+
+        return img
+    end
+
+    img = sparsity_thumbnail_csc(SparseMatrixCSC(A), H=8000, W=8000)
+    save("sparsity.png", img)
+
+    # function sparse_to_svg(A::SparseMatrixCSC, filename;
+    #         width=2000, height=2000,
+    #         dot_size=1.0)
+
+    #     m, n = size(A)
+
+    #     scale_x = width / n
+    #     scale_y = height / m
+
+    #     open(filename, "w") do io
+    #         println(io, """<svg xmlns="http://www.w3.org/2000/svg"
+    #                 width="$width" height="$height"
+    #                 viewBox="0 0 $width $height">""")
+
+    #         println(io, """<rect width="100%" height="100%" fill="white"/>""")
+
+    #         @inbounds for col in 1:n
+    #             x = (col - 1) * scale_x
+    #             for ptr in A.colptr[col]:(A.colptr[col+1]-1)
+    #                 row = A.rowval[ptr]
+    #                 y = (row - 1) * scale_y
+
+    #                 println(io,
+    #                         """<rect x="$x" y="$y"
+    #                         width="$dot_size" height="$dot_size"
+    #                         fill="black"/>""")
+    #             end
+    #         end
+
+    #         println(io, "</svg>")
+    #     end
+    # end
+
+    # A = SparseMatrixCSC(A)
+    # sparse_to_svg(A, "sparsity.svg", width=1000, height=1000, dot_size=1.0)
+
     exit()
 end
 
-A = SparseMatrixCSR(A)
+A64      = SparseMatrixCSR(A) # builds with Int64
+nzval    = A64.nzval
+rowptr32 = Int32.(A64.rowptr)
+colval32 = Int32.(A64.colval)
+A = SparseMatrixCSR{1}(
+        size(A64,1),
+        size(A64,2),
+        rowptr32,
+        colval32,
+        nzval
+    )
 
-@assert size(A, 1) == size(A, 2)
-n = size(A, 1)
 y = rand(n)
-println("Matrix loaded of size n=$(n)")
 
 # Get solver
 solver = getproperty(Krylov, Symbol(fname))

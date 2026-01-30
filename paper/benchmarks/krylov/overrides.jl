@@ -9,10 +9,25 @@ end
 
 function xkdotr(n::Integer, x::Vector{T}, y::Vector{T}) where T <: FloatOrComplex
     r = Ref{T}(0)
-    # TODO: i think this is wrong for complex
+    # TODO: i think this is wrong for complexP::SparseMatrixCSR
     XK.BLAS.dot_sync(n, x, 1, y, 1, r)
     return r[]
 end
+
+# TODO
+# struct XKArray{T, N} <: AbstractArray{T,N}
+#     data::Array{T, N}
+# end
+#
+# const XKVector{T} = XKArray{T, 1}
+# const XKMatrix{T} = XKArray{T, 2}
+#
+# # TODO: this should work - Alexis do it thanks :-)
+# #   mat = XKSparseMatrix(mat_csc)
+# #   mat = XKSparseMatrix(mat_csr)
+# struct XKSparseMatrix{T MAT_T}
+#     data::SparseMatrixCSR
+# end
 
 function xknrm2(n::Integer, x::Vector{T}) where T <: AbstractFloat
     return sqrt(xkdotr(n, x, x))

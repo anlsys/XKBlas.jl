@@ -1,7 +1,6 @@
 # ----------------------------
 # Command-line arguments
 # ----------------------------
-
 using LinearAlgebra, SparseArrays, SparseMatricesCSR
 using Krylov
 using SuiteSparseMatrixCollection, MatrixMarket
@@ -19,7 +18,20 @@ function ssmc_get_matrix(name::String)
     M = MatrixMarket.mmread(path)
 
     # convert CSC to CSR
-    return SparseMatrixCSR(M)
+    P64 = SparseMatrixCSR(M)  # builds with Int64
+
+    nzval    = P64.nzval
+    rowptr32 = Int32.(P64.rowptr)
+    colval32 = Int32.(P64.colval)
+
+    # Use the constructor: SparseMatrixCSR{Bi}(m, n, rowptr, colval, nzval)
+    return SparseMatrixCSR{1}(
+        size(P64,1),
+        size(P64,2),
+        rowptr32,
+        colval32,
+        nzval
+    )
 end
 
 # Solver to use

@@ -8,7 +8,9 @@ module XK
 
     @show xkblas_dir
     # --- Load the library handle ---
-    libpath = Libdl.find_library(["libxkblas"], [joinpath(xkblas_dir, "lib")])
+    # libpath = Libdl.find_library(["libxkblas"], [joinpath(xkblas_dir, "lib")])
+    libpath = joinpath(xkblas_dir, "lib/libxkblas.so")
+    @show libpath
     if libpath === nothing
         error("libxkblas not found. Make sure the library is built using `deps/build_local.jl`.")
     end
@@ -19,6 +21,7 @@ module XK
     include("bindings.jl")
 
     # --- High-level wrappers ---
+    include("xkarrays.jl")
     include("wrappers.jl")
     include("logger.jl")
     include("threading.jl")
@@ -38,4 +41,5 @@ module XK
         end
         atexit(cleanup)
     end
+
 end

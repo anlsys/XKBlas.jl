@@ -7,19 +7,13 @@ function xkdot(n::Integer, x::Vector{T}, y::Vector{T}) where T <: FloatOrComplex
     return r[]
 end
 
-function xkdotr(n::Integer, x::Vector{T}, y::Vector{T}) where T <: FloatOrComplex
-    r = Ref{T}(0)
-    # TODO: i think this is wrong for complex
-    XK.BLAS.dot_sync(n, x, 1, y, 1, r)
-    return r[]
-end
-
 function xknrm2(n::Integer, x::Vector{T}) where T <: AbstractFloat
-    return sqrt(xkdotr(n, x, x))
+    return sqrt(real(xkdotr(n, x, x)))
 end
 
-Krylov.kdotr(n::Integer, x::AbstractVector{Complex{T}}, y::AbstractVector{Complex{T}}) where T <: AbstractFloat = xkdotr(n, x, y)
-Krylov.kdotr(n::Integer, x::AbstractVector{T},          y::AbstractVector{T})          where T <: AbstractFloat = xkdotr(n, x, y)
+# not needed, Krylov.jl will dispatch to kdot
+# Krylov.kdotr(n::Integer, x::AbstractVector{Complex{T}}, y::AbstractVector{Complex{T}}) where T <: AbstractFloat = xkdotr(n, x, y)
+# Krylov.kdotr(n::Integer, x::AbstractVector{T},          y::AbstractVector{T})          where T <: AbstractFloat = xkdotr(n, x, y)
 
 Krylov.kdot(n::Integer, x::AbstractVector{T}, y::AbstractVector{T}) where T <: FloatOrComplex   = xkdot(n, x, y)
 Krylov.kdot(n::Integer, x::Vector{T},         y::Vector{T})         where T <: BLAS.BlasComplex = xkdot(n, x, y)

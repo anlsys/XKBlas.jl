@@ -64,7 +64,8 @@ module BLAS
     axpy_sync( n, alpha::Float32,    x, incx, y, incy)  = XK.saxpy_sync( n, Ref(alpha), x, incx, y, incy)
     axpy_sync( n, alpha::Float64,    x, incx, y, incy)  = XK.daxpy_sync( n, Ref(alpha), x, incx, y, incy)
 
-    # TODO: complex version not supported yet, but they will need to change the dispatcher
+    # TODO: complex dot (dotc) not supported yet.
+    # Add it to that dispatcher once supported
     dot(      n, x, incx, y, incy, result::Ref{Float32}) = XK.sdot(      n, x, incx, y, incy, result)
     dot(      n, x, incx, y, incy, result::Ref{Float64}) = XK.ddot(      n, x, incx, y, incy, result)
     dot_async(n, x, incx, y, incy, result::Ref{Float32}) = XK.sdot_async(n, x, incx, y, incy, result)
