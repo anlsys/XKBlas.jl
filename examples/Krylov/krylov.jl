@@ -36,8 +36,8 @@ function symmetric_definite(n::Int, T)
 end
 
 tolerance = 1.0e-6
-A, y = symmetric_definite(n, T)
-A = SparseMatrixCSR(A)
+A_csc, y_cpu = symmetric_definite(n, T)
+A_csr = SparseMatrixCSR(A_csc)
 f = getproperty(Krylov, Symbol(fname))
 
 # If using XKBlas
@@ -55,12 +55,19 @@ if use_xkblas
     # Use XK-types replacement.
     # This define krylov_utils.jl API for XKVector/XKMatrix
     include("./krylov-utils-xk.jl")
-    A = XKSparseMatrixCSR(A)
-    y = XKVector(y)
-
+    A = XKSparseMatrixCSR(A_csr)
+    y = XKVector(y_cpu)
+else
+    A = A_csr
+    y = y_cpu
 end
 
 println("Running fname=$(fname), with n=$(n) of tile size ts=$(ts) $(use_xkblas ? "" : "not") using XKBLAS")
+
+println("A=")
+print(A)
+println("y=")
+print(y)
 
 # Run
 @time begin

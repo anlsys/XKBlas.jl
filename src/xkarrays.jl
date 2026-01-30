@@ -13,6 +13,7 @@ end
 XKObject(data::Array{T,N})            where {T,N}  = XKObject{T,N,Array{T,N}}(data)
 XKObject(data::SparseMatrixCSR{Bi,T}) where {Bi,T} = XKObject{T,2,SparseMatrixCSR{Bi,T}}(data)
 
+# Base functions forwarding
 Base.eltype(A::XKObject)                                   = eltype(A.data)
 Base.length(A::XKObject)                                   = length(A.data)
 Base.size(A::XKObject)                                     = size(A.data)
@@ -22,15 +23,17 @@ Base.pointer(A::XKObject)                                  = pointer(A.data)
 Base.cconvert(::Type{Ptr{T}}, A::XKObject) where {T}       = Base.cconvert(Ptr{T}, A.data)
 Base.unsafe_convert(::Type{Ptr{T}}, A::XKObject) where {T} = Base.unsafe_convert(Ptr{T}, A.data)
 
-const XKArray{T,N}         = XKObject{T,N,Array{T,N}}
-const XKVector{T}          = XKObject{T,1,Vector{T}}
-const XKMatrix{T}          = XKObject{T,2,Matrix{T}}
-const XKSparseMatrixCSR{T} = XKObject{T,2,SparseMatrixCSR}
+# Types
+const XKArray{T,N}                          = XKObject{T,N,Array{T,N}}
+const XKVector{T}                           = XKObject{T,1,Vector{T}}
+const XKMatrix{T}                           = XKObject{T,2,Matrix{T}}
+const XKSparseMatrixCSR{Bi,Tv,Ti<:Integer}  = XKObject{Tv,2,SparseMatrixCSR{Bi,Tv,Ti}}
 
-XKArray(data::Array{T,N}) where {T,N}    = XKObject(data)
-XKVector(data::Vector{T}) where {T}      = XKObject(data)
-XKMatrix(data::Matrix{T}) where {T}      = XKObject(data)
-XKSparseMatrixCSR(data::SparseMatrixCSR) = XKObject(data)
+# Constructors
+XKArray(data::Array{T,N})                          where {T,N}               = XKObject{T,N,Array{T,N}}(data)
+XKVector(data::Vector{T})                          where {T}                 = XKObject{T,1,Vector{T}}(data)
+XKMatrix(data::Matrix{T})                          where {T}                 = XKObject{T,2,Matrix{T}}(data)
+XKSparseMatrixCSR(data::SparseMatrixCSR{Bi,Tv,Ti}) where {Bi,Tv,Ti<:Integer} = XKObject{Tv,2,SparseMatrixCSR{Bi,Tv,Ti}}(data)
 
 # type but not dimensionality specified
 XKObject{T,N,Td}(::UndefInitializer, dims::Dims{N})           where {T,N,Td} = XKObject{T,N,Td}(Td(undef, dims))
