@@ -11,15 +11,8 @@ function xkdot(n::Integer, x::Vector{T}, y::Vector{T}) where T <: FloatOrComplex
     return r[]
 end
 
-function xkdotr(n::Integer, x::Vector{T}, y::Vector{T}) where T <: FloatOrComplex
-    r = Ref{T}(0)
-    # TODO: i think this is wrong for complexP::SparseMatrixCSR
-    XK.BLAS.dot_sync(n, x, 1, y, 1, r)
-    return r[]
-end
-
 function xknrm2(n::Integer, x::Vector{T}) where T <: AbstractFloat
-    return sqrt(real(xkdotr(n, x, x)))
+    return sqrt(real(xkdot(n, x, x)))
 end
 
 #######################################################
@@ -37,7 +30,9 @@ Krylov.kaxpby!(n::Integer, a::Complex{T}, x::XKVector{Complex{T}}, b::T,        
 Krylov.kaxpby!(n::Integer, a::T,          x::XKVector{Complex{T}}, b::T,          y::XKVector{Complex{T}}) where T <: AbstractFloat  = XK.BLAS.ext.axpby_sync(n, a, x.data, 1, b, y.data, 1)
 
 Krylov.kdot( n::Integer, x::XKVector{T}, y::XKVector{T}) where T <: FloatOrComplex = xkdot( n, x.data, y.data)
-Krylov.kdotr(n::Integer, x::XKVector{T}, y::XKVector{T}) where T <: FloatOrComplex = xkdotr(n, x.data, y.data)
+
+# no need to implement this, Krylov.jl already fallbacks to real(dot())
+# Krylov.kdotr(n::Integer, x::XKVector{T}, y::XKVector{T}) where T <: FloatOrComplex = xkdotr(n, x.data, y.data)
 
 # TODO: do we need other types ?
 Krylov.kfill!(x::XKVector{T}, val::T) where T <: FloatOrComplex = XK.BLAS.ext.fill_sync(length(x.data), x.data, val)

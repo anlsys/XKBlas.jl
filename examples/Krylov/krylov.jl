@@ -48,15 +48,15 @@ if use_xkblas
     # set tile parameter
     XK.set_tile_parameter(ts)
 
+    # Use drop-in replacement of CPU types
+    # This overrides Krylov.jl original CPU routines dispatcher.
+    # include("./krylov-utils-overrides.jl")
+
     # Use XK-types replacement.
     # This define krylov_utils.jl API for XKVector/XKMatrix
     include("./krylov-utils-xk.jl")
     A = XKSparseMatrixCSR(A)
     y = XKVector(y)
-
-    # Use drop-in replacement of CPU types
-    # This overrides Krylov.jl original CPU routines dispatcher.
-    # include("./krylov-utils-overrides.jl")
 
 end
 
