@@ -42,15 +42,22 @@ f = getproperty(Krylov, Symbol(fname))
 
 # If using XKBlas
 if use_xkblas
-    # redefine krylov_utils.jl API with XKVector/XKMatrix
-    include("./overrides.jl")
 
-    # use them types to dispatch on XK.XBLAS routines
-    A = XKSparseMatrixCSR(A)
-    y = XKVector(y)
+    using XK
 
     # set tile parameter
     XK.set_tile_parameter(ts)
+
+    # Use XK-types replacement.
+    # This define krylov_utils.jl API for XKVector/XKMatrix
+    include("./krylov-utils-xk.jl")
+    A = XKSparseMatrixCSR(A)
+    y = XKVector(y)
+
+    # Use drop-in replacement of CPU types
+    # This overrides Krylov.jl original CPU routines dispatcher.
+    # include("./krylov-utils-overrides.jl")
+
 end
 
 println("Running fname=$(fname), with n=$(n) of tile size ts=$(ts) $(use_xkblas ? "" : "not") using XKBLAS")
