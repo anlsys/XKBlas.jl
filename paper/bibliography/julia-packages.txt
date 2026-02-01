@@ -1,0 +1,2 @@
+https://github.com/JuliaGPU/KernelAbstractions.jl
+https://github.com/JuliaParallel/Dagger.jl
